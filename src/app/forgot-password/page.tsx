@@ -1,11 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Mail, Loader2, Send } from "lucide-react";
+import { Mail, Loader2, Send, CheckCircle } from "lucide-react";
 import Link from "next/link";
 import { sendPasswordResetEmail } from "firebase/auth";
 
@@ -34,10 +33,10 @@ const forgotPasswordSchema = z.object({
 });
 
 export default function ForgotPasswordPage() {
-  const router = useRouter();
   const { toast } = useToast();
   const auth = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   const form = useForm<z.infer<typeof forgotPasswordSchema>>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -50,11 +49,7 @@ export default function ForgotPasswordPage() {
     setIsSubmitting(true);
     try {
       await sendPasswordResetEmail(auth, values.email);
-      toast({
-        title: "Password Reset Email Sent",
-        description: "Check your inbox for a link to reset your password.",
-      });
-      router.push("/login");
+      setEmailSent(true);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -65,6 +60,31 @@ export default function ForgotPasswordPage() {
       setIsSubmitting(false);
     }
   };
+
+  if (emailSent) {
+    return (
+        <div className="flex items-center justify-center min-h-screen bg-muted/40">
+            <Card className="w-full max-w-sm text-center">
+                <CardHeader>
+                    <CardTitle className="text-2xl font-headline flex items-center justify-center gap-2">
+                        <CheckCircle className="h-8 w-8 text-green-500" />
+                        Email Sent!
+                    </CardTitle>
+                    <CardDescription>
+                        A password reset link has been sent to your email address. Please check your inbox (and spam folder).
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Link href="/login" passHref>
+                        <Button>
+                            Back to Sign In
+                        </Button>
+                    </Link>
+                </CardContent>
+            </Card>
+        </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-muted/40">
