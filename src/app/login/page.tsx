@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/firebase";
 import { FirebaseError } from "firebase/app";
 import Link from "next/link";
-import { initiateEmailSignIn } from "@/firebase";
+import { signInWithEmailAndPassword } from "firebase/auth";
 
 
 const loginSchema = z.object({
@@ -39,7 +39,7 @@ export default function LoginPage() {
   const onSubmit = async (values: z.infer<typeof loginSchema>) => {
     setIsSubmitting(true);
     try {
-        await initiateEmailSignIn(auth, values.email, values.password);
+        await signInWithEmailAndPassword(auth, values.email, values.password);
         toast({
             title: "Signed in",
             description: "You have successfully signed in.",
