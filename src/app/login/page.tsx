@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 
 const AUTH_KEY = "core-diary-auth";
 // In a real app, this would be a securely hashed password.
-const MOCK_PASSWORD = "password"; 
+const MOCK_PASSWORD = "abcd1234"; 
 
 const loginSchema = z.object({
   password: z.string().min(1, "Password is required."),
@@ -49,7 +49,7 @@ export default function LoginPage() {
       } else {
         form.setError("password", {
           type: "manual",
-          message: "Incorrect password. The password is 'password'.",
+          message: "Incorrect password.",
         });
       }
       setIsSubmitting(false);
