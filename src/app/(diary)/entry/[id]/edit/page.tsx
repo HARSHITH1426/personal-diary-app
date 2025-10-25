@@ -27,6 +27,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { getWritingPromptAction } from '@/app/actions';
+import { useUser } from '@/firebase';
 
 const formSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -39,6 +40,7 @@ export default function EditEntryPage() {
   const params = useParams();
   const { id } = params;
   const entryId = Array.isArray(id) ? id[0] : id;
+  const { user } = useUser();
 
   const { entry, actions, entries } = useDiaryStore(state => ({
     entry: state.entries.find(e => e.id === entryId),
@@ -65,7 +67,7 @@ export default function EditEntryPage() {
       form.reset({
         title: entry.title,
         content: entry.content,
-        tags: entry.tags.join(', '),
+        tags: Array.isArray(entry.tags) ? entry.tags.join(', ') : '',
       });
     } else {
         // If entry is not found (e.g., on direct navigation), redirect
@@ -75,7 +77,7 @@ export default function EditEntryPage() {
   }, [entry, form, router]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!entry) return;
+    if (!entry || !user) return;
 
     startTransition(() => {
       actions.updateEntry({
@@ -83,7 +85,7 @@ export default function EditEntryPage() {
         title: values.title,
         content: values.content,
         tags: values.tags?.split(',').map(t => t.trim()).filter(Boolean) || [],
-      });
+      }, user.uid);
       toast({
         title: 'Entry updated!',
         description: 'Your changes have been saved.',
@@ -93,9 +95,9 @@ export default function EditEntryPage() {
   }
 
   const handleDelete = () => {
-    if (!entry) return;
+    if (!entry || !user) return;
     startDeleteTransition(() => {
-      actions.deleteEntry(entry.id);
+      actions.deleteEntry(entry.id, user.uid);
       toast({
         title: 'Entry deleted',
         description: 'The entry has been permanently removed.',

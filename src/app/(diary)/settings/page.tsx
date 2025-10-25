@@ -7,12 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { DiaryEntry } from "@/lib/types";
+import { useUser } from "@/firebase";
 
 export default function SettingsPage() {
   const { entries, actions } = useDiaryStore(state => ({ entries: state.entries, actions: state.actions }));
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const { user } = useUser();
 
   const handleExport = () => {
     const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
@@ -33,6 +35,10 @@ export default function SettingsPage() {
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!user) {
+        toast({ variant: "destructive", title: "Authentication Error", description: "You must be logged in to import entries." });
+        return;
+    }
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -48,7 +54,7 @@ export default function SettingsPage() {
         if (!Array.isArray(importedEntries)) {
             throw new Error("Invalid file format. Expected an array of entries.");
         }
-        actions.importEntries(importedEntries);
+        actions.importEntries(importedEntries, user.uid);
         toast({
           title: "Import Successful",
           description: "Your entries have been imported.",

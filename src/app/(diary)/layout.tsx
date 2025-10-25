@@ -4,7 +4,6 @@ import React, { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  CalendarIcon,
   FilePlus2,
   Home,
   LogOut,
@@ -23,37 +22,8 @@ import {
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-
-const AUTH_KEY = "core-diary-auth";
-
-function useAuth() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const router = useRouter();
-
-  useEffect(() => {
-    try {
-      const authStatus = localStorage.getItem(AUTH_KEY) === "true";
-      setIsAuthenticated(authStatus);
-      if (!authStatus) {
-        router.push("/login");
-      }
-    } catch (error) {
-      setIsAuthenticated(false);
-      router.push("/login");
-    }
-  }, [router]);
-  
-  const logout = () => {
-    localStorage.removeItem(AUTH_KEY);
-    setIsAuthenticated(false);
-    router.push('/login');
-  };
-
-  return { isAuthenticated, logout };
-}
-
+import { useAuth, useUser } from "@/firebase";
 
 function ThemeToggle() {
     const [theme, setTheme] = useState(() => {
@@ -91,7 +61,13 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
     actions: state.actions
   }));
   const pathname = usePathname();
-  const { logout } = useAuth();
+  const auth = useAuth();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await auth.signOut();
+    router.push('/login');
+  };
   
   const handleLinkClick = () => {
     onNavigate?.();
@@ -162,7 +138,7 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
       <div className="p-4 border-t flex justify-between items-center">
         <ThemeToggle />
-        <Button variant="ghost" onClick={logout}>
+        <Button variant="ghost" onClick={handleLogout}>
           <LogOut className="mr-2 h-4 w-4" /> Logout
         </Button>
       </div>
@@ -175,17 +151,24 @@ export default function DiaryLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { isAuthenticated } = useAuth();
+  const { user, isUserLoading } = useUser();
   const { actions, initialized } = useDiaryStore(state => ({ actions: state.actions, initialized: state.initialized }));
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
-    if (!initialized) {
-      actions.initialize();
+    if (!isUserLoading && !user) {
+      router.push("/login");
     }
-  }, [initialized, actions]);
+  }, [user, isUserLoading, router]);
 
-  if (isAuthenticated === null || !isAuthenticated) {
+  useEffect(() => {
+    if (user && !initialized) {
+      actions.initialize(user.uid);
+    }
+  }, [user, initialized, actions]);
+
+  if (isUserLoading || !user) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -228,7 +211,7 @@ function MenuIcon(props: React.SVGProps<SVGSVGElement>) {
         xmlns="http://www.w3.org/2000/svg"
         width="24"
         height="24"
-        viewBox="0 0 24 24"
+        viewBox="0 0 24"
         fill="none"
         stroke="currentColor"
         strokeWidth="2"

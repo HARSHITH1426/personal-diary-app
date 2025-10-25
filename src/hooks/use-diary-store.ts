@@ -4,8 +4,12 @@ import { create } from 'zustand';
 import { DiaryEntry } from '@/lib/types';
 import { produce } from 'immer';
 import { isSameDay, parseISO } from 'date-fns';
-
-const DIARY_STORAGE_KEY = 'core-diary-entries';
+import { collection, doc, getDocs, writeBatch, getFirestore } from 'firebase/firestore';
+import { 
+  addDocumentNonBlocking,
+  deleteDocumentNonBlocking,
+  setDocumentNonBlocking,
+} from '@/firebase/non-blocking-updates';
 
 type DiaryState = {
   entries: DiaryEntry[];
@@ -16,27 +20,13 @@ type DiaryState = {
 };
 
 type DiaryActions = {
-  initialize: () => void;
-  addEntry: (entry: Omit<DiaryEntry, 'id' | 'date' | 'tags'> & { tags: string }) => string;
-  updateEntry: (entry: DiaryEntry) => void;
-  deleteEntry: (id: string) => void;
+  initialize: (userId: string) => void;
+  addEntry: (entry: Omit<DiaryEntry, 'id' | 'date' | 'tags'> & { tags: string }, userId: string) => string;
+  updateEntry: (entry: DiaryEntry, userId: string) => void;
+  deleteEntry: (id: string, userId: string) => void;
   setSearchTerm: (term: string) => void;
   setSelectedDate: (date: Date | undefined) => void;
-  importEntries: (newEntries: DiaryEntry[]) => void;
-};
-
-const getEntriesFromStorage = (): DiaryEntry[] => {
-  if (typeof window === 'undefined') {
-    return [];
-  }
-  const entriesJson = localStorage.getItem(DIARY_STORAGE_KEY);
-  return entriesJson ? JSON.parse(entriesJson) : [];
-};
-
-const saveEntriesToStorage = (entries: DiaryEntry[]) => {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(DIARY_STORAGE_KEY, JSON.stringify(entries));
-  }
+  importEntries: (newEntries: DiaryEntry[], userId: string) => void;
 };
 
 const getTagsFromEntries = (entries: DiaryEntry[]): string[] => {
@@ -51,14 +41,18 @@ export const useDiaryStore = create<DiaryState & { actions: DiaryActions }>()((s
   selectedDate: undefined,
   tags: [],
   actions: {
-    initialize: () => {
+    initialize: async (userId) => {
       if (get().initialized) return;
-      const entries = getEntriesFromStorage();
+      const db = getFirestore();
+      const entriesCol = collection(db, `users/${userId}/diaryEntries`);
+      const snapshot = await getDocs(entriesCol);
+      const entries = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as DiaryEntry));
       const tags = getTagsFromEntries(entries);
       set({ entries, tags, initialized: true });
     },
-    addEntry: (newEntry) => {
-      const id = crypto.randomUUID();
+    addEntry: (newEntry, userId) => {
+      const db = getFirestore();
+      const id = doc(collection(db, `users/${userId}/diaryEntries`)).id;
       const entry: DiaryEntry = {
         ...newEntry,
         id,
@@ -66,43 +60,58 @@ export const useDiaryStore = create<DiaryState & { actions: DiaryActions }>()((s
         tags: newEntry.tags.split(',').map(t => t.trim()).filter(Boolean),
       };
 
+      const docRef = doc(db, `users/${userId}/diaryEntries`, id);
+      addDocumentNonBlocking(collection(db, `users/${userId}/diaryEntries`), entry);
+
       const updatedEntries = produce(get().entries, (draft) => {
         draft.push(entry);
       });
-
-      saveEntriesToStorage(updatedEntries);
       const tags = getTagsFromEntries(updatedEntries);
       set({ entries: updatedEntries, tags });
       return id;
     },
-    updateEntry: (updatedEntry) => {
+    updateEntry: (updatedEntry, userId) => {
+      const db = getFirestore();
+      const docRef = doc(db, `users/${userId}/diaryEntries`, updatedEntry.id);
+      const entryData = {
+          ...updatedEntry,
+          tags: Array.isArray(updatedEntry.tags) ? updatedEntry.tags : updatedEntry.tags.toString().split(',').map(t => t.trim()).filter(Boolean),
+      };
+      setDocumentNonBlocking(docRef, entryData, { merge: true });
+      
       const updatedEntries = produce(get().entries, (draft) => {
         const index = draft.findIndex((e) => e.id === updatedEntry.id);
         if (index !== -1) {
-          draft[index] = {
-            ...updatedEntry,
-            tags: Array.isArray(updatedEntry.tags) ? updatedEntry.tags : updatedEntry.tags.toString().split(',').map(t => t.trim()).filter(Boolean),
-          };
+          draft[index] = entryData;
         }
       });
-      saveEntriesToStorage(updatedEntries);
       const tags = getTagsFromEntries(updatedEntries);
       set({ entries: updatedEntries, tags });
     },
-    deleteEntry: (id) => {
+    deleteEntry: (id, userId) => {
+      const db = getFirestore();
+      const docRef = doc(db, `users/${userId}/diaryEntries`, id);
+      deleteDocumentNonBlocking(docRef);
+
       const updatedEntries = get().entries.filter((e) => e.id !== id);
-      saveEntriesToStorage(updatedEntries);
       const tags = getTagsFromEntries(updatedEntries);
       set({ entries: updatedEntries, tags });
     },
     setSearchTerm: (term) => set({ searchTerm: term }),
     setSelectedDate: (date) => set({ selectedDate: date }),
-    importEntries: (newEntries) => {
+    importEntries: async (newEntries, userId) => {
+        const db = getFirestore();
         const validEntries = newEntries.filter(e => e.id && e.date && e.title && typeof e.content !== 'undefined');
         const updatedEntries = [...get().entries, ...validEntries];
-        // Remove duplicates, keeping the newly imported ones
         const uniqueEntries = Array.from(new Map(updatedEntries.map(e => [e.id, e])).values());
-        saveEntriesToStorage(uniqueEntries);
+
+        const batch = writeBatch(db);
+        validEntries.forEach(entry => {
+            const docRef = doc(db, `users/${userId}/diaryEntries`, entry.id);
+            batch.set(docRef, entry);
+        });
+        await batch.commit();
+
         const tags = getTagsFromEntries(uniqueEntries);
         set({ entries: uniqueEntries, tags });
     }
