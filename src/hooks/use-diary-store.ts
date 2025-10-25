@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import { DiaryEntry } from '@/lib/types';
 import { produce } from 'immer';
 import { isSameDay, parseISO } from 'date-fns';
-import { collection, doc, getDocs, writeBatch, getFirestore, onSnapshot } from 'firebase/firestore';
+import { collection, doc, writeBatch, getFirestore, onSnapshot } from 'firebase/firestore';
 import { 
   addDocumentNonBlocking,
   deleteDocumentNonBlocking,
@@ -56,7 +56,6 @@ export const useDiaryStore = create<DiaryState & { actions: DiaryActions }>()((s
             set({ entries, tags, initialized: true });
           },
           (err) => {
-            console.error("Error in onSnapshot:", err);
             const contextualError = new FirestorePermissionError({
               operation: 'list',
               path: entriesCol.path,
@@ -69,7 +68,8 @@ export const useDiaryStore = create<DiaryState & { actions: DiaryActions }>()((s
       },
     addEntry: (newEntry, userId) => {
       const db = getFirestore();
-      const docRef = doc(collection(db, `users/${userId}/diaryEntries`));
+      const entriesCol = collection(db, `users/${userId}/diaryEntries`);
+      const docRef = doc(entriesCol);
       const id = docRef.id;
 
       const entry: DiaryEntry = {
@@ -79,7 +79,8 @@ export const useDiaryStore = create<DiaryState & { actions: DiaryActions }>()((s
         tags: newEntry.tags.split(',').map(t => t.trim()).filter(Boolean),
       };
 
-      addDocumentNonBlocking(collection(db, `users/${userId}/diaryEntries`), entry);
+      // Use the non-blocking function which handles contextual errors
+      addDocumentNonBlocking(entriesCol, entry);
 
       const updatedEntries = produce(get().entries, (draft) => {
         draft.push(entry);
@@ -95,6 +96,8 @@ export const useDiaryStore = create<DiaryState & { actions: DiaryActions }>()((s
           ...updatedEntry,
           tags: Array.isArray(updatedEntry.tags) ? updatedEntry.tags : updatedEntry.tags.toString().split(',').map(t => t.trim()).filter(Boolean),
       };
+
+      // Use the non-blocking function which handles contextual errors
       setDocumentNonBlocking(docRef, entryData, { merge: true });
       
       const updatedEntries = produce(get().entries, (draft) => {
@@ -109,6 +112,8 @@ export const useDiaryStore = create<DiaryState & { actions: DiaryActions }>()((s
     deleteEntry: (id, userId) => {
       const db = getFirestore();
       const docRef = doc(db, `users/${userId}/diaryEntries`, id);
+      
+      // Use the non-blocking function which handles contextual errors
       deleteDocumentNonBlocking(docRef);
 
       const updatedEntries = get().entries.filter((e) => e.id !== id);
@@ -124,23 +129,22 @@ export const useDiaryStore = create<DiaryState & { actions: DiaryActions }>()((s
         const batch = writeBatch(db);
         validEntries.forEach(entry => {
             const docRef = doc(db, `users/${userId}/diaryEntries`, entry.id);
-            // Here we just stage the write. The commit will be where the error could happen.
             batch.set(docRef, entry, { merge: true });
         });
         
         batch.commit().then(() => {
-            // This part only runs on success
-            const updatedEntries = [...get().entries, ...validEntries];
-            const uniqueEntries = Array.from(new Map(updatedEntries.map(e => [e.id, e])).values());
+            const currentEntries = get().entries;
+            const entryMap = new Map(currentEntries.map(e => [e.id, e]));
+            validEntries.forEach(e => entryMap.set(e.id, e));
+            const uniqueEntries = Array.from(entryMap.values());
+            
             const tags = getTagsFromEntries(uniqueEntries);
             set({ entries: uniqueEntries, tags });
         }).catch(error => {
-            // On failure, we construct and emit a contextual error for the batch write.
-            // We can't know which exact document failed, so we report a general 'write' on the collection.
             const contextualError = new FirestorePermissionError({
-                operation: 'write', // Batch writes are generic 'write' operations
-                path: `users/${userId}/diaryEntries`, // Path to the collection
-                requestResourceData: validEntries.map(e => ({id: e.id, ...e})) // Include all data that was attempted
+                operation: 'write', 
+                path: `users/${userId}/diaryEntries`,
+                requestResourceData: validEntries
             });
             errorEmitter.emit('permission-error', contextualError);
         });
