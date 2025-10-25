@@ -163,9 +163,13 @@ export default function DiaryLayout({
   }, [user, isUserLoading, router]);
 
   useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
     if (user && !initialized) {
-      actions.initialize(user.uid);
+      unsubscribe = actions.initialize(user.uid);
     }
+    return () => {
+      unsubscribe?.();
+    };
   }, [user, initialized, actions]);
 
   if (isUserLoading || !user) {

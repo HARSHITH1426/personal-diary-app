@@ -4,12 +4,14 @@ import { create } from 'zustand';
 import { DiaryEntry } from '@/lib/types';
 import { produce } from 'immer';
 import { isSameDay, parseISO } from 'date-fns';
-import { collection, doc, getDocs, writeBatch, getFirestore } from 'firebase/firestore';
+import { collection, doc, getDocs, writeBatch, getFirestore, onSnapshot } from 'firebase/firestore';
 import { 
   addDocumentNonBlocking,
   deleteDocumentNonBlocking,
   setDocumentNonBlocking,
-} from '@/firebase/non-blocking-updates';
+} from '@/firebase';
+import { FirestorePermissionError } from '@/firebase/errors';
+import { errorEmitter } from '@/firebase/error-emitter';
 
 type DiaryState = {
   entries: DiaryEntry[];
@@ -20,7 +22,7 @@ type DiaryState = {
 };
 
 type DiaryActions = {
-  initialize: (userId: string) => void;
+  initialize: (userId: string) => () => void; // Returns unsubscribe function
   addEntry: (entry: Omit<DiaryEntry, 'id' | 'date' | 'tags'> & { tags: string }, userId: string) => string;
   updateEntry: (entry: DiaryEntry, userId: string) => void;
   deleteEntry: (id: string, userId: string) => void;
@@ -41,18 +43,35 @@ export const useDiaryStore = create<DiaryState & { actions: DiaryActions }>()((s
   selectedDate: undefined,
   tags: [],
   actions: {
-    initialize: async (userId) => {
-      if (get().initialized) return;
-      const db = getFirestore();
-      const entriesCol = collection(db, `users/${userId}/diaryEntries`);
-      const snapshot = await getDocs(entriesCol);
-      const entries = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as DiaryEntry));
-      const tags = getTagsFromEntries(entries);
-      set({ entries, tags, initialized: true });
-    },
+    initialize: (userId) => {
+        if (get().initialized) return () => {};
+        const db = getFirestore();
+        const entriesCol = collection(db, `users/${userId}/diaryEntries`);
+      
+        const unsubscribe = onSnapshot(
+          entriesCol,
+          (snapshot) => {
+            const entries = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as DiaryEntry));
+            const tags = getTagsFromEntries(entries);
+            set({ entries, tags, initialized: true });
+          },
+          (err) => {
+            console.error("Error in onSnapshot:", err);
+            const contextualError = new FirestorePermissionError({
+              operation: 'list',
+              path: entriesCol.path,
+            });
+            errorEmitter.emit('permission-error', contextualError);
+          }
+        );
+      
+        return unsubscribe;
+      },
     addEntry: (newEntry, userId) => {
       const db = getFirestore();
-      const id = doc(collection(db, `users/${userId}/diaryEntries`)).id;
+      const docRef = doc(collection(db, `users/${userId}/diaryEntries`));
+      const id = docRef.id;
+
       const entry: DiaryEntry = {
         ...newEntry,
         id,
@@ -60,7 +79,6 @@ export const useDiaryStore = create<DiaryState & { actions: DiaryActions }>()((s
         tags: newEntry.tags.split(',').map(t => t.trim()).filter(Boolean),
       };
 
-      const docRef = doc(db, `users/${userId}/diaryEntries`, id);
       addDocumentNonBlocking(collection(db, `users/${userId}/diaryEntries`), entry);
 
       const updatedEntries = produce(get().entries, (draft) => {
@@ -99,21 +117,33 @@ export const useDiaryStore = create<DiaryState & { actions: DiaryActions }>()((s
     },
     setSearchTerm: (term) => set({ searchTerm: term }),
     setSelectedDate: (date) => set({ selectedDate: date }),
-    importEntries: async (newEntries, userId) => {
+    importEntries: (newEntries, userId) => {
         const db = getFirestore();
         const validEntries = newEntries.filter(e => e.id && e.date && e.title && typeof e.content !== 'undefined');
-        const updatedEntries = [...get().entries, ...validEntries];
-        const uniqueEntries = Array.from(new Map(updatedEntries.map(e => [e.id, e])).values());
-
+        
         const batch = writeBatch(db);
         validEntries.forEach(entry => {
             const docRef = doc(db, `users/${userId}/diaryEntries`, entry.id);
-            batch.set(docRef, entry);
+            // Here we just stage the write. The commit will be where the error could happen.
+            batch.set(docRef, entry, { merge: true });
         });
-        await batch.commit();
-
-        const tags = getTagsFromEntries(uniqueEntries);
-        set({ entries: uniqueEntries, tags });
+        
+        batch.commit().then(() => {
+            // This part only runs on success
+            const updatedEntries = [...get().entries, ...validEntries];
+            const uniqueEntries = Array.from(new Map(updatedEntries.map(e => [e.id, e])).values());
+            const tags = getTagsFromEntries(uniqueEntries);
+            set({ entries: uniqueEntries, tags });
+        }).catch(error => {
+            // On failure, we construct and emit a contextual error for the batch write.
+            // We can't know which exact document failed, so we report a general 'write' on the collection.
+            const contextualError = new FirestorePermissionError({
+                operation: 'write', // Batch writes are generic 'write' operations
+                path: `users/${userId}/diaryEntries`, // Path to the collection
+                requestResourceData: validEntries.map(e => ({id: e.id, ...e})) // Include all data that was attempted
+            });
+            errorEmitter.emit('permission-error', contextualError);
+        });
     }
   },
 }));
