@@ -23,33 +23,27 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
+import { useAuth, useUser } from "@/firebase";
+import { signOut } from "firebase/auth";
 
-const AUTH_KEY = "core-diary-auth";
 
-function useAuth() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+function useAppAuth() {
+  const { user, isUserLoading } = useUser();
   const router = useRouter();
+  const auth = useAuth();
 
   useEffect(() => {
-    try {
-      const authStatus = localStorage.getItem(AUTH_KEY) === "true";
-      setIsAuthenticated(authStatus);
-      if (!authStatus) {
-        router.push("/login");
-      }
-    } catch (error) {
-      setIsAuthenticated(false);
+    if (!isUserLoading && !user) {
       router.push("/login");
     }
-  }, [router]);
-  
+  }, [isUserLoading, user, router]);
+
   const logout = () => {
-    localStorage.removeItem(AUTH_KEY);
-    setIsAuthenticated(false);
-    router.push('/login');
+    signOut(auth);
+    // The onAuthStateChanged listener in the provider will handle the redirect.
   };
 
-  return { isAuthenticated, logout };
+  return { isAuthenticated: !!user, isUserLoading, logout };
 }
 
 
@@ -89,7 +83,7 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
     actions: state.actions
   }));
   const pathname = usePathname();
-  const { logout } = useAuth();
+  const { logout } = useAppAuth();
   
   const handleLinkClick = () => {
     onNavigate?.();
@@ -173,17 +167,18 @@ export default function DiaryLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isUserLoading } = useAppAuth();
   const { actions, initialized } = useDiaryStore(state => ({ actions: state.actions, initialized: state.initialized }));
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user } = useUser();
 
   useEffect(() => {
-    if (!initialized) {
-      actions.initialize();
+    if (user && !initialized) {
+      actions.initialize(user.uid);
     }
-  }, [initialized, actions]);
+  }, [initialized, actions, user]);
 
-  if (isAuthenticated === null || !isAuthenticated) {
+  if (isUserLoading || !isAuthenticated) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
