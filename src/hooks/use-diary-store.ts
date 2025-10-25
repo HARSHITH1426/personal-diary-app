@@ -4,14 +4,8 @@ import { create } from 'zustand';
 import { DiaryEntry } from '@/lib/types';
 import { produce } from 'immer';
 import { isSameDay, parseISO } from 'date-fns';
-import { collection, doc, writeBatch, getFirestore, onSnapshot } from 'firebase/firestore';
-import { 
-  addDocumentNonBlocking,
-  deleteDocumentNonBlocking,
-  setDocumentNonBlocking,
-} from '@/firebase';
-import { FirestorePermissionError } from '@/firebase/errors';
-import { errorEmitter } from '@/firebase/error-emitter';
+
+const DIARY_STORAGE_KEY = 'core-diary-entries';
 
 type DiaryState = {
   entries: DiaryEntry[];
@@ -22,18 +16,26 @@ type DiaryState = {
 };
 
 type DiaryActions = {
-  initialize: (userId: string) => () => void; // Returns unsubscribe function
-  addEntry: (entry: Omit<DiaryEntry, 'id' | 'date' | 'tags'> & { tags: string }, userId: string) => string;
-  updateEntry: (entry: DiaryEntry, userId: string) => void;
-  deleteEntry: (id: string, userId: string) => void;
+  initialize: () => void;
+  addEntry: (entry: Omit<DiaryEntry, 'id' | 'date'> & { tags: string }) => string;
+  updateEntry: (entry: DiaryEntry) => void;
+  deleteEntry: (id: string) => void;
   setSearchTerm: (term: string) => void;
   setSelectedDate: (date: Date | undefined) => void;
-  importEntries: (newEntries: DiaryEntry[], userId: string) => void;
+  importEntries: (newEntries: DiaryEntry[]) => void;
 };
 
 const getTagsFromEntries = (entries: DiaryEntry[]): string[] => {
   const allTags = entries.flatMap(entry => entry.tags);
   return [...new Set(allTags)].sort();
+};
+
+const saveEntriesToLocalStorage = (entries: DiaryEntry[]) => {
+  try {
+    localStorage.setItem(DIARY_STORAGE_KEY, JSON.stringify(entries));
+  } catch (error) {
+    console.error("Failed to save entries to local storage:", error);
+  }
 };
 
 export const useDiaryStore = create<DiaryState & { actions: DiaryActions }>()((set, get) => ({
@@ -43,63 +45,43 @@ export const useDiaryStore = create<DiaryState & { actions: DiaryActions }>()((s
   selectedDate: undefined,
   tags: [],
   actions: {
-    initialize: (userId) => {
-        if (get().initialized) return () => {};
-        const db = getFirestore();
-        const entriesCol = collection(db, `users/${userId}/diaryEntries`);
-      
-        const unsubscribe = onSnapshot(
-          entriesCol,
-          (snapshot) => {
-            const entries = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as DiaryEntry));
-            const tags = getTagsFromEntries(entries);
-            set({ entries, tags, initialized: true });
-          },
-          (err) => {
-            const contextualError = new FirestorePermissionError({
-              operation: 'list',
-              path: entriesCol.path,
-            });
-            errorEmitter.emit('permission-error', contextualError);
-          }
-        );
-      
-        return unsubscribe;
-      },
-    addEntry: (newEntry, userId) => {
-      const db = getFirestore();
-      const entriesCol = collection(db, `users/${userId}/diaryEntries`);
-      const docRef = doc(entriesCol);
-      const id = docRef.id;
-
+    initialize: () => {
+      if (get().initialized) return;
+      try {
+        const storedEntries = localStorage.getItem(DIARY_STORAGE_KEY);
+        if (storedEntries) {
+          const entries = JSON.parse(storedEntries);
+          const tags = getTagsFromEntries(entries);
+          set({ entries, tags, initialized: true });
+        } else {
+          set({ initialized: true });
+        }
+      } catch (error) {
+        console.error("Failed to load entries from local storage:", error);
+        set({ initialized: true });
+      }
+    },
+    addEntry: (newEntry) => {
+      const id = new Date().toISOString() + Math.random();
       const entry: DiaryEntry = {
         ...newEntry,
         id,
         date: new Date().toISOString(),
         tags: newEntry.tags.split(',').map(t => t.trim()).filter(Boolean),
       };
-
-      // Use the non-blocking function which handles contextual errors
-      addDocumentNonBlocking(entriesCol, entry);
-
       const updatedEntries = produce(get().entries, (draft) => {
         draft.push(entry);
       });
       const tags = getTagsFromEntries(updatedEntries);
       set({ entries: updatedEntries, tags });
+      saveEntriesToLocalStorage(updatedEntries);
       return id;
     },
-    updateEntry: (updatedEntry, userId) => {
-      const db = getFirestore();
-      const docRef = doc(db, `users/${userId}/diaryEntries`, updatedEntry.id);
+    updateEntry: (updatedEntry) => {
       const entryData = {
           ...updatedEntry,
           tags: Array.isArray(updatedEntry.tags) ? updatedEntry.tags : updatedEntry.tags.toString().split(',').map(t => t.trim()).filter(Boolean),
       };
-
-      // Use the non-blocking function which handles contextual errors
-      setDocumentNonBlocking(docRef, entryData, { merge: true });
-      
       const updatedEntries = produce(get().entries, (draft) => {
         const index = draft.findIndex((e) => e.id === updatedEntry.id);
         if (index !== -1) {
@@ -108,46 +90,25 @@ export const useDiaryStore = create<DiaryState & { actions: DiaryActions }>()((s
       });
       const tags = getTagsFromEntries(updatedEntries);
       set({ entries: updatedEntries, tags });
+      saveEntriesToLocalStorage(updatedEntries);
     },
-    deleteEntry: (id, userId) => {
-      const db = getFirestore();
-      const docRef = doc(db, `users/${userId}/diaryEntries`, id);
-      
-      // Use the non-blocking function which handles contextual errors
-      deleteDocumentNonBlocking(docRef);
-
+    deleteEntry: (id) => {
       const updatedEntries = get().entries.filter((e) => e.id !== id);
       const tags = getTagsFromEntries(updatedEntries);
       set({ entries: updatedEntries, tags });
+      saveEntriesToLocalStorage(updatedEntries);
     },
     setSearchTerm: (term) => set({ searchTerm: term }),
     setSelectedDate: (date) => set({ selectedDate: date }),
-    importEntries: (newEntries, userId) => {
-        const db = getFirestore();
-        const validEntries = newEntries.filter(e => e.id && e.date && e.title && typeof e.content !== 'undefined');
-        
-        const batch = writeBatch(db);
-        validEntries.forEach(entry => {
-            const docRef = doc(db, `users/${userId}/diaryEntries`, entry.id);
-            batch.set(docRef, entry, { merge: true });
-        });
-        
-        batch.commit().then(() => {
-            const currentEntries = get().entries;
-            const entryMap = new Map(currentEntries.map(e => [e.id, e]));
-            validEntries.forEach(e => entryMap.set(e.id, e));
-            const uniqueEntries = Array.from(entryMap.values());
-            
-            const tags = getTagsFromEntries(uniqueEntries);
-            set({ entries: uniqueEntries, tags });
-        }).catch(error => {
-            const contextualError = new FirestorePermissionError({
-                operation: 'write', 
-                path: `users/${userId}/diaryEntries`,
-                requestResourceData: validEntries
-            });
-            errorEmitter.emit('permission-error', contextualError);
-        });
+    importEntries: (newEntries) => {
+      const currentEntries = get().entries;
+      const entryMap = new Map(currentEntries.map(e => [e.id, e]));
+      newEntries.forEach(e => entryMap.set(e.id, e));
+      const uniqueEntries = Array.from(entryMap.values());
+      
+      const tags = getTagsFromEntries(uniqueEntries);
+      set({ entries: uniqueEntries, tags });
+      saveEntriesToLocalStorage(uniqueEntries);
     }
   },
 }));

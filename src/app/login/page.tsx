@@ -5,67 +5,70 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Lock, LogIn, Loader2, AtSign } from "lucide-react";
+import { Lock, LogIn, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/firebase";
-import { FirebaseError } from "firebase/app";
-import Link from "next/link";
-import { signInWithEmailAndPassword } from "firebase/auth";
 
+const AUTH_KEY = "core-diary-auth";
 
 const loginSchema = z.object({
-  email: z.string().email("Invalid email address."),
   password: z.string().min(1, "Password is required."),
 });
 
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const auth = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "",
       password: "",
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof loginSchema>) => {
+  const onSubmit = (values: z.infer<typeof loginSchema>) => {
     setIsSubmitting(true);
-    try {
-        await signInWithEmailAndPassword(auth, values.email, values.password);
+    // This is a mock authentication for demo purposes.
+    if (values.password === "abcd1234") {
+      try {
+        localStorage.setItem(AUTH_KEY, "true");
         toast({
-            title: "Signed in",
-            description: "You have successfully signed in.",
+          title: "Signed in",
+          description: "You have successfully signed in.",
         });
         router.replace("/diary");
-    } catch (error) {
-        console.error(error);
-        let description = "An unexpected error occurred.";
-        if (error instanceof FirebaseError) {
-            switch (error.code) {
-                case "auth/user-not-found":
-                case "auth/wrong-password":
-                case "auth/invalid-credential":
-                    description = "Invalid email or password.";
-                    break;
-                default:
-                    description = "Failed to sign in. Please try again.";
-            }
-        }
+      } catch (error) {
         toast({
-            variant: "destructive",
-            title: "Authentication failed",
-            description,
+          variant: "destructive",
+          title: "Storage Error",
+          description: "Could not save authentication status. Please ensure your browser allows local storage.",
         });
-    } finally {
         setIsSubmitting(false);
+      }
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Authentication failed",
+        description: "Invalid password.",
+      });
+      setIsSubmitting(false);
     }
   };
 
@@ -74,30 +77,16 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <div className="mx-auto bg-primary text-primary-foreground rounded-full p-3 w-fit mb-4">
-             <Lock className="h-6 w-6" />
+            <Lock className="h-6 w-6" />
           </div>
           <CardTitle className="text-2xl font-headline">Core Diary</CardTitle>
-          <CardDescription>Enter your credentials to unlock your journal.</CardDescription>
+          <CardDescription>
+            Enter your password to unlock your journal.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-               <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                        <div className="relative">
-                            <AtSign className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input placeholder="your@email.com" {...field} className="pl-8" />
-                        </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
               <FormField
                 control={form.control}
                 name="password"
@@ -105,17 +94,26 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                        <div className="relative">
-                           <Lock className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                           <Input type="password" placeholder="••••••••" {...field} className="pl-8" />
-                        </div>
+                      <div className="relative">
+                        <Lock className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type="password"
+                          placeholder="••••••••"
+                          {...field}
+                          className="pl-8"
+                        />
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
               <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}
+                {isSubmitting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <LogIn className="mr-2 h-4 w-4" />
+                )}
                 Sign In
               </Button>
             </form>

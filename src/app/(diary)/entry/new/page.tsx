@@ -16,7 +16,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { getWritingPromptAction } from '@/app/actions';
-import { useUser } from '@/firebase';
 
 const formSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
@@ -30,7 +29,6 @@ export default function NewEntryPage() {
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [isPromptLoading, startPromptTransition] = useTransition();
-  const { user } = useUser();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -42,21 +40,12 @@ export default function NewEntryPage() {
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!user) {
-      toast({
-        variant: "destructive",
-        title: "Authentication Error",
-        description: "You must be logged in to create an entry.",
-      });
-      return;
-    }
-
     startTransition(() => {
       const newEntryId = actions.addEntry({
         title: values.title,
         content: values.content,
         tags: values.tags || '',
-      }, user.uid);
+      });
       toast({
         title: 'Entry saved!',
         description: 'Your new diary entry has been successfully created.',
