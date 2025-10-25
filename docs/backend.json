@@ -1,0 +1,342 @@
+{
+  "entities": {
+    "DiaryEntry": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "DiaryEntry",
+      "type": "object",
+      "description": "Represents a single diary entry.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the DiaryEntry entity."
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the diary entry."
+        },
+        "content": {
+          "type": "string",
+          "description": "Content of the diary entry, can include rich text formatting."
+        },
+        "dateCreated": {
+          "type": "string",
+          "description": "Date and time when the diary entry was created.",
+          "format": "date-time"
+        },
+        "lastModified": {
+          "type": "string",
+          "description": "Date and time when the diary entry was last modified.",
+          "format": "date-time"
+        },
+        "categoryIds": {
+          "type": "array",
+          "description": "References to Categories. (Relationship: Category N:N DiaryEntry)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tagIds": {
+          "type": "array",
+          "description": "References to Tags. (Relationship: Tag N:N DiaryEntry)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "mood": {
+          "type": "string",
+          "description": "The mood associated with the diary entry (e.g., happy, sad, neutral)."
+        },
+        "weather": {
+          "type": "string",
+          "description": "The weather associated with the diary entry (e.g., sunny, rainy, cloudy)."
+        },
+        "attachmentIds": {
+          "type": "array",
+          "description": "References to Attachments. (Relationship: Attachment 1:N DiaryEntry)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "content",
+        "dateCreated",
+        "lastModified"
+      ]
+    },
+    "Category": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Category",
+      "type": "object",
+      "description": "Represents a category to classify diary entries.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Category entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the category."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the category."
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    },
+    "Tag": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Tag",
+      "type": "object",
+      "description": "Represents a tag to further classify diary entries.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Tag entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the tag."
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    },
+    "Attachment": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Attachment",
+      "type": "object",
+      "description": "Represents an attachment associated with a diary entry.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Attachment entity."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Name of the attached file."
+        },
+        "fileType": {
+          "type": "string",
+          "description": "Type of the attached file (e.g., image, video, audio)."
+        },
+        "fileSize": {
+          "type": "number",
+          "description": "Size of the attached file in bytes."
+        },
+        "uploadDate": {
+          "type": "string",
+          "description": "Date and time when the file was uploaded.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "fileName",
+        "fileType",
+        "fileSize",
+        "uploadDate"
+      ]
+    },
+    "UserAccount": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserAccount",
+      "type": "object",
+      "description": "Represents a user account for the application.  Note:  This entity does NOT store the user password.  It is assumed that authentication is handled by an external service.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserAccount entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the user.",
+          "format": "email"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Display name of the user."
+        },
+        "dateCreated": {
+          "type": "string",
+          "description": "Date and time when the user account was created.",
+          "format": "date-time"
+        },
+        "lastLogin": {
+          "type": "string",
+          "description": "Date and time of the user's last login.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "displayName",
+        "dateCreated"
+      ]
+    },
+    "PasswordResetToken": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PasswordResetToken",
+      "type": "object",
+      "description": "Represents a password reset token for a user account.  This should be stored securely and have a limited lifespan.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the PasswordResetToken entity."
+        },
+        "userAccountId": {
+          "type": "string",
+          "description": "Reference to UserAccount. (Relationship: UserAccount 1:1 PasswordResetToken)"
+        },
+        "token": {
+          "type": "string",
+          "description": "The password reset token."
+        },
+        "expirationDate": {
+          "type": "string",
+          "description": "Date and time when the token expires.",
+          "format": "date-time"
+        },
+        "used": {
+          "type": "boolean",
+          "description": "Indicates whether the token has been used."
+        }
+      },
+      "required": [
+        "id",
+        "userAccountId",
+        "token",
+        "expirationDate",
+        "used"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "UserAccount",
+          "schema": {
+            "$ref": "#/backend/entities/UserAccount"
+          },
+          "description": "Stores user account information.  Each document represents a user. The userId is the firebase auth uid",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user, corresponding to the Firebase Auth UID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/diaryEntries/{diaryEntryId}",
+        "definition": {
+          "entityName": "DiaryEntry",
+          "schema": {
+            "$ref": "#/backend/entities/DiaryEntry"
+          },
+          "description": "Stores diary entries for a specific user. Path-based ownership enables secure list operations. Includes denormalized 'userId' for authorization independence. Each document represents a single diary entry.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user, corresponding to the Firebase Auth UID."
+            },
+            {
+              "name": "diaryEntryId",
+              "description": "The unique identifier for the diary entry."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/attachments/{attachmentId}",
+        "definition": {
+          "entityName": "Attachment",
+          "schema": {
+            "$ref": "#/backend/entities/Attachment"
+          },
+          "description": "Stores attachments for a specific user's diary entries. Path-based ownership enables secure list operations.  Includes denormalized 'userId' for authorization independence. Each document represents a single attachment.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user, corresponding to the Firebase Auth UID."
+            },
+            {
+              "name": "attachmentId",
+              "description": "The unique identifier for the attachment."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/categories/{categoryId}",
+        "definition": {
+          "entityName": "Category",
+          "schema": {
+            "$ref": "#/backend/entities/Category"
+          },
+          "description": "Stores global categories that can be used by all users.",
+          "params": [
+            {
+              "name": "categoryId",
+              "description": "The unique identifier for the category."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/tags/{tagId}",
+        "definition": {
+          "entityName": "Tag",
+          "schema": {
+            "$ref": "#/backend/entities/Tag"
+          },
+          "description": "Stores global tags that can be used by all users.",
+          "params": [
+            {
+              "name": "tagId",
+              "description": "The unique identifier for the tag."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/passwordResetTokens/{passwordResetTokenId}",
+        "definition": {
+          "entityName": "PasswordResetToken",
+          "schema": {
+            "$ref": "#/backend/entities/PasswordResetToken"
+          },
+          "description": "Stores password reset tokens for a specific user. Path-based ownership enables secure list operations. The password reset token are located as a subcollection for the user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user, corresponding to the Firebase Auth UID."
+            },
+            {
+              "name": "passwordResetTokenId",
+              "description": "The unique identifier for the password reset token."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to ensure security, scalability, and debuggability, following the principles of Authorization Independence, Clarity of Intent, DBAC (Database-Based Access Control), and QAPs (Rules are not Filters).  Authorization Independence is achieved by path-based ownership for diary entries and password reset tokens.  The structure facilitates secure `list` operations by segregating data based on ownership (user ID). The user's `DiaryEntry`, `Attachment`, and `PasswordResetToken` are stored in subcollections under the user's document (`/users/{userId}`). This eliminates the need for complex rules based on document content, simplifies security rules, and avoids the need for `get()` calls to parent documents during authorization, enabling atomic operations. Data segregation (e.g., separate collections for `users` and their `DiaryEntry` data) ensures a homogeneous security posture, where all documents within a collection share the same security requirements."
+  }
+}

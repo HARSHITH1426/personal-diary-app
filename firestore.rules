@@ -1,0 +1,130 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Checks if the request is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * @description Checks if the authenticated user's UID matches the provided userId.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * @description Checks if the authenticated user's UID matches the provided userId, and that the resource exists.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && exists(resource.data);
+    }
+    
+    function exists(data) {
+        return data is map
+    }
+
+    /**
+     * @description Rules for the /users/{userId} collection.
+     * @path /users/{userId}
+     * @allow (create) User with UID 'user123' can create their own user document.
+     * @deny (create) User with UID 'user123' cannot create a user document with a different ID ('user456').
+     * @allow (get) User with UID 'user123' can read their own user document.
+     * @deny (get) User with UID 'user123' cannot read another user's document.
+     * @principle Enforces document ownership for writes and restricts access to a user's own data.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    /**
+     * @description Rules for the /users/{userId}/diaryEntries/{diaryEntryId} collection.
+     * @path /users/{userId}/diaryEntries/{diaryEntryId}
+     * @allow (create) User with UID 'user123' can create a diary entry under their user document.
+     * @deny (create) User with UID 'user123' cannot create a diary entry under another user's document ('user456').
+     * @allow (get) User with UID 'user123' can read their own diary entry.
+     * @deny (get) User with UID 'user123' cannot read a diary entry from another user ('user456').
+     * @principle Enforces document ownership for writes and restricts access to a user's own data.
+     */
+    match /users/{userId}/diaryEntries/{diaryEntryId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    /**
+     * @description Rules for the /users/{userId}/attachments/{attachmentId} collection.
+     * @path /users/{userId}/attachments/{attachmentId}
+     * @allow (create) User with UID 'user123' can create an attachment under their user document.
+     * @deny (create) User with UID 'user123' cannot create an attachment under another user's document ('user456').
+     * @allow (get) User with UID 'user123' can read their own attachment.
+     * @deny (get) User with UID 'user123' cannot read an attachment from another user ('user456').
+     * @principle Enforces document ownership for writes and restricts access to a user's own data.
+     */
+    match /users/{userId}/attachments/{attachmentId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    /**
+     * @description Rules for the /categories/{categoryId} collection.
+     * @path /categories/{categoryId}
+     * @allow (get) Any user can read a category.
+     * @allow (list) Any user can list categories.
+     * @deny (create) No user can create categories.
+     * @principle Allows public read access to categories.
+     */
+    match /categories/{categoryId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Rules for the /tags/{tagId} collection.
+     * @path /tags/{tagId}
+     * @allow (get) Any user can read a tag.
+     * @allow (list) Any user can list tags.
+     * @deny (create) No user can create tags.
+     * @principle Allows public read access to tags.
+     */
+    match /tags/{tagId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Rules for the /users/{userId}/passwordResetTokens/{passwordResetTokenId} collection.
+     * @path /users/{userId}/passwordResetTokens/{passwordResetTokenId}
+     * @allow (create) User with UID 'user123' can create a password reset token under their user document.
+     * @deny (create) User with UID 'user123' cannot create a password reset token under another user's document ('user456').
+     * @allow (get) User with UID 'user123' can read their own password reset token.
+     * @deny (get) User with UID 'user123' cannot read a password reset token from another user ('user456').
+     * @principle Enforces document ownership for writes and restricts access to a user's own data.
+     */
+    match /users/{userId}/passwordResetTokens/{passwordResetTokenId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if false;
+      allow delete: if isOwner(userId);
+    }
+  }
+}
