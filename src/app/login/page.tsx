@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Lock, LogIn, Loader2, Mail } from 'lucide-react';
+import { Lock, LogIn, Loader2, Mail, BookHeart } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -81,13 +81,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-muted/40">
-      <Card className="w-full max-w-sm">
+    <div className="flex items-center justify-center min-h-screen bg-muted/40 p-4">
+      <Card className="w-full max-w-sm shadow-lg">
         <CardHeader className="text-center">
-          <div className="mx-auto bg-primary text-primary-foreground rounded-full p-3 w-fit mb-4">
-            <Lock className="h-6 w-6" />
+          <div className="mx-auto bg-primary text-primary-foreground rounded-full p-4 w-fit mb-4">
+            <BookHeart className="h-8 w-8" />
           </div>
-          <CardTitle className="text-2xl font-headline">Core Diary</CardTitle>
+          <CardTitle className="text-3xl font-headline">Core Diary</CardTitle>
           <CardDescription>
             Enter your credentials to access your journal.
           </CardDescription>
@@ -103,12 +103,12 @@ export default function LoginPage() {
                     <FormLabel>Email</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Mail className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                         <Input
                           type="email"
                           placeholder="your@email.com"
                           {...field}
-                          className="pl-8"
+                          className="pl-10"
                         />
                       </div>
                     </FormControl>
@@ -124,12 +124,12 @@ export default function LoginPage() {
                     <FormLabel>Password</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Lock className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                         <Input
                           type="password"
                           placeholder="••••••••"
                           {...field}
-                          className="pl-8"
+                          className="pl-10"
                         />
                       </div>
                     </FormControl>
