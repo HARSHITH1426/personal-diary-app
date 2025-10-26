@@ -23,27 +23,33 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
-import { useAuth, useUser } from "@/firebase";
-import { signOut } from "firebase/auth";
 
+const AUTH_KEY = "core-diary-auth";
 
 function useAppAuth() {
-  const { user, isUserLoading } = useUser();
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const router = useRouter();
-  const auth = useAuth();
 
   useEffect(() => {
-    if (!isUserLoading && !user) {
+    try {
+      const authStatus = localStorage.getItem(AUTH_KEY) === "true";
+      setIsAuthenticated(authStatus);
+      if (!authStatus) {
+        router.push("/login");
+      }
+    } catch (error) {
+      setIsAuthenticated(false);
       router.push("/login");
     }
-  }, [isUserLoading, user, router]);
-
+  }, [router]);
+  
   const logout = () => {
-    signOut(auth);
-    // The onAuthStateChanged listener in the provider will handle the redirect.
+    localStorage.removeItem(AUTH_KEY);
+    setIsAuthenticated(false);
+    router.push('/login');
   };
 
-  return { isAuthenticated: !!user, isUserLoading, logout };
+  return { isAuthenticated, logout };
 }
 
 
@@ -167,18 +173,18 @@ export default function DiaryLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { isAuthenticated, isUserLoading } = useAppAuth();
+  const { isAuthenticated } = useAppAuth();
   const { actions, initialized } = useDiaryStore(state => ({ actions: state.actions, initialized: state.initialized }));
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user } = useUser();
 
   useEffect(() => {
-    if (user && !initialized) {
-      actions.initialize(user.uid);
+    if (!initialized) {
+      actions.initialize();
     }
-  }, [initialized, actions, user]);
+  }, [initialized, actions]);
 
-  if (isUserLoading || !isAuthenticated) {
+
+  if (!isAuthenticated) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />

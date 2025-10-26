@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -6,10 +5,8 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Lock, LogIn, Loader2, Mail } from "lucide-react";
-import Link from "next/link";
+import { Lock, LogIn, Loader2 } from "lucide-react";
 
-import { useAuth, useUser } from "@/firebase";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -28,55 +25,66 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { signInWithEmailAndPassword } from "firebase/auth";
+
+const AUTH_KEY = "core-diary-auth";
+const CORRECT_PASSWORD = "abcd1234";
 
 const loginSchema = z.object({
-  email: z.string().email("Invalid email address."),
   password: z.string().min(1, "Password is required."),
 });
 
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const auth = useAuth();
-  const { user, isUserLoading } = useUser();
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!isUserLoading && user) {
-      router.replace('/diary');
+    try {
+      const authStatus = localStorage.getItem(AUTH_KEY) === "true";
+      setIsAuthenticated(authStatus);
+      if (authStatus) {
+        router.replace('/diary');
+      }
+    } catch (error) {
+      setIsAuthenticated(false);
     }
-  }, [user, isUserLoading, router]);
+  }, [router]);
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "",
       password: "",
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof loginSchema>) => {
+  const onSubmit = (values: z.infer<typeof loginSchema>) => {
     setIsSubmitting(true);
-    try {
-      await signInWithEmailAndPassword(auth, values.email, values.password);
-      // onAuthStateChanged will handle the redirect
-    } catch (error: any) {
-      let message = "An unknown error occurred.";
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-        message = "Invalid email or password. Please try again.";
+    setTimeout(() => {
+      if (values.password === CORRECT_PASSWORD) {
+        try {
+          localStorage.setItem(AUTH_KEY, "true");
+          setIsAuthenticated(true);
+          router.push('/diary');
+        } catch (error) {
+           toast({
+            variant: "destructive",
+            title: "Authentication failed",
+            description: "Could not save authentication status.",
+          });
+        }
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Authentication failed",
+          description: "Incorrect password. Please try again.",
+        });
       }
-      toast({
-        variant: "destructive",
-        title: "Authentication failed",
-        description: message,
-      });
-    } finally {
-        setIsSubmitting(false);
-    }
+      setIsSubmitting(false);
+    }, 500);
   };
 
-  if (isUserLoading || user) {
+  if (isAuthenticated === null) {
     return (
         <div className="flex h-screen w-full items-center justify-center bg-background">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -93,33 +101,12 @@ export default function LoginPage() {
           </div>
           <CardTitle className="text-2xl font-headline">Core Diary</CardTitle>
           <CardDescription>
-            Enter your credentials to unlock your journal.
+            Enter your password to unlock your journal.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Mail className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          type="email"
-                          placeholder="you@example.com"
-                          {...field}
-                          className="pl-8"
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
               <FormField
                 control={form.control}
                 name="password"
@@ -141,21 +128,13 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
-              <div className="flex items-center justify-between text-sm">
-                 <Link href="/signup" className="text-primary hover:underline">
-                  Create an account
-                </Link>
-                <Link href="/forgot-password" className="text-primary hover:underline">
-                  Forgot Password?
-                </Link>
-              </div>
               <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
                   <LogIn className="mr-2 h-4 w-4" />
                 )}
-                Sign In
+                Unlock
               </Button>
             </form>
           </Form>
