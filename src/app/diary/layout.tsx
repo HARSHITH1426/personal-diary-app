@@ -1,11 +1,9 @@
-
 "use client";
 
 import React, { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  CalendarIcon,
   FilePlus2,
   Home,
   LogOut,
@@ -24,12 +22,11 @@ import {
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
 const AUTH_KEY = "core-diary-auth";
 
-function useAuth() {
+function useAppAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const router = useRouter();
 
@@ -92,7 +89,7 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
     actions: state.actions
   }));
   const pathname = usePathname();
-  const { logout } = useAuth();
+  const { logout } = useAppAuth();
   
   const handleLinkClick = () => {
     onNavigate?.();
@@ -176,7 +173,7 @@ export default function DiaryLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAppAuth();
   const { actions, initialized } = useDiaryStore(state => ({ actions: state.actions, initialized: state.initialized }));
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -185,6 +182,7 @@ export default function DiaryLayout({
       actions.initialize();
     }
   }, [initialized, actions]);
+
 
   if (isAuthenticated === null || !isAuthenticated) {
     return (
@@ -229,7 +227,7 @@ function MenuIcon(props: React.SVGProps<SVGSVGElement>) {
         xmlns="http://www.w3.org/2000/svg"
         width="24"
         height="24"
-        viewBox="0 0 24 24"
+        viewBox="0 0 24"
         fill="none"
         stroke="currentColor"
         strokeWidth="2"
@@ -242,5 +240,3 @@ function MenuIcon(props: React.SVGProps<SVGSVGElement>) {
       </svg>
     )
   }
-
-    

@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from "react";
@@ -10,8 +9,9 @@ import { useFilteredEntries } from "@/hooks/use-diary-store";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { DiaryEntry } from "@/lib/types";
 
-function EntryCard({ entry }: { entry: ReturnType<typeof useFilteredEntries>[0] }) {
+function EntryCard({ entry }: { entry: DiaryEntry }) {
   const contentSnippet = entry.content.substring(0, 150);
   return (
     <Link href={`/diary/entry/${entry.id}/edit`} className="block">
@@ -23,7 +23,7 @@ function EntryCard({ entry }: { entry: ReturnType<typeof useFilteredEntries>[0] 
         <CardContent className="flex-grow">
           <p className="text-sm text-muted-foreground">{contentSnippet}{entry.content.length > 150 ? "..." : ""}</p>
         </CardContent>
-        {entry.tags.length > 0 && (
+        {entry.tags && entry.tags.length > 0 && (
           <CardFooter>
             <div className="flex flex-wrap gap-2">
               {entry.tags.map((tag) => (
@@ -69,5 +69,3 @@ export default function DiaryPage() {
     </div>
   );
 }
-
-    

@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useTransition } from 'react';
@@ -66,7 +65,7 @@ export default function EditEntryPage() {
       form.reset({
         title: entry.title,
         content: entry.content,
-        tags: entry.tags.join(', '),
+        tags: Array.isArray(entry.tags) ? entry.tags.join(', ') : '',
       });
     } else {
         // If entry is not found (e.g., on direct navigation), redirect
@@ -229,5 +228,3 @@ export default function EditEntryPage() {
     </div>
   );
 }
-
-    
