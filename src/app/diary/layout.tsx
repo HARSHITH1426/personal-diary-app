@@ -151,6 +151,18 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
+function LoadingScreen() {
+    return (
+        <div className="flex h-screen w-full flex-col items-center justify-center bg-background">
+            <div className="flex items-center gap-4 text-2xl font-headline font-bold text-primary">
+                <BookHeart className="h-10 w-10 animate-pulse" />
+                <span className="animate-pulse">Core Diary</span>
+            </div>
+            <p className="text-muted-foreground mt-2 animate-pulse">Loading your journal...</p>
+        </div>
+    )
+}
+
 export default function DiaryLayout({
   children,
 }: {
@@ -167,11 +179,7 @@ export default function DiaryLayout({
   }, [user, isUserLoading, router]);
 
   if (isUserLoading || !user) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   return (
@@ -225,3 +233,5 @@ function MenuIcon(props: React.SVGProps<SVGSVGElement>) {
       </svg>
     )
   }
+
+    
