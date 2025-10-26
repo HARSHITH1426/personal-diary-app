@@ -6,8 +6,9 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Lock, LogIn, Loader2, Mail } from "lucide-react";
+import { Lock, Loader2, Mail, UserPlus } from "lucide-react";
 import Link from "next/link";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 
 import { useAuth, useUser } from "@/firebase";
 import { Button } from "@/components/ui/button";
@@ -28,14 +29,13 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { signInWithEmailAndPassword } from "firebase/auth";
 
-const loginSchema = z.object({
+const signupSchema = z.object({
   email: z.string().email("Invalid email address."),
-  password: z.string().min(1, "Password is required."),
+  password: z.string().min(6, "Password must be at least 6 characters."),
 });
 
-export default function LoginPage() {
+export default function SignupPage() {
   const router = useRouter();
   const { toast } = useToast();
   const auth = useAuth();
@@ -48,31 +48,35 @@ export default function LoginPage() {
     }
   }, [user, isUserLoading, router]);
 
-  const form = useForm<z.infer<typeof loginSchema>>({
-    resolver: zodResolver(loginSchema),
+  const form = useForm<z.infer<typeof signupSchema>>({
+    resolver: zodResolver(signupSchema),
     defaultValues: {
       email: "",
       password: "",
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof loginSchema>) => {
+  const onSubmit = async (values: z.infer<typeof signupSchema>) => {
     setIsSubmitting(true);
     try {
-      await signInWithEmailAndPassword(auth, values.email, values.password);
-      // onAuthStateChanged will handle the redirect
+      await createUserWithEmailAndPassword(auth, values.email, values.password);
+      // onAuthStateChanged will handle the redirect to /diary after sign up
+      toast({
+        title: "Account Created!",
+        description: "You have been successfully signed up.",
+      });
     } catch (error: any) {
       let message = "An unknown error occurred.";
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-        message = "Invalid email or password. Please try again.";
+      if (error.code === 'auth/email-already-in-use') {
+        message = "This email address is already in use.";
       }
       toast({
         variant: "destructive",
-        title: "Authentication failed",
+        title: "Sign-up failed",
         description: message,
       });
     } finally {
-        setIsSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -88,12 +92,9 @@ export default function LoginPage() {
     <div className="flex items-center justify-center min-h-screen bg-muted/40">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-          <div className="mx-auto bg-primary text-primary-foreground rounded-full p-3 w-fit mb-4">
-            <Lock className="h-6 w-6" />
-          </div>
-          <CardTitle className="text-2xl font-headline">Core Diary</CardTitle>
+          <CardTitle className="text-2xl font-headline">Create an Account</CardTitle>
           <CardDescription>
-            Enter your credentials to unlock your journal.
+            Join Core Diary to start your journaling journey.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -141,24 +142,22 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
-              <div className="flex items-center justify-between text-sm">
-                 <Link href="/signup" className="text-primary hover:underline">
-                  Create an account
-                </Link>
-                <Link href="/forgot-password" className="text-primary hover:underline">
-                  Forgot Password?
-                </Link>
-              </div>
               <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
-                  <LogIn className="mr-2 h-4 w-4" />
+                  <UserPlus className="mr-2 h-4 w-4" />
                 )}
-                Sign In
+                Sign Up
               </Button>
             </form>
           </Form>
+          <div className="mt-4 text-center text-sm">
+            Already have an account?{" "}
+            <Link href="/login" className="text-primary hover:underline">
+              Sign In
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </div>
