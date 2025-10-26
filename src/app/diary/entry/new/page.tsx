@@ -44,7 +44,7 @@ export default function NewEntryPage() {
       const newEntryId = actions.addEntry({
         title: values.title,
         content: values.content,
-        tags: values.tags,
+        tags: values.tags || '',
       });
       toast({
         title: 'Entry saved!',
