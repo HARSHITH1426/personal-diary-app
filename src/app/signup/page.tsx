@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Lock, Loader2, Mail, UserPlus } from "lucide-react";
+import { Lock, Loader2, Mail, UserPlus, CheckCircle } from "lucide-react";
 import Link from "next/link";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 
@@ -41,6 +41,8 @@ export default function SignupPage() {
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [signupSuccess, setSignupSuccess] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
 
   useEffect(() => {
     if (!isUserLoading && user) {
@@ -60,11 +62,9 @@ export default function SignupPage() {
     setIsSubmitting(true);
     try {
       await createUserWithEmailAndPassword(auth, values.email, values.password);
-      // onAuthStateChanged will handle the redirect to /diary after sign up
-      toast({
-        title: "Account Created!",
-        description: "You have been successfully signed up.",
-      });
+      setRegisteredEmail(values.email);
+      setSignupSuccess(true);
+      // We don't need the toast anymore, a dedicated success screen is better.
     } catch (error: any) {
       let message = "An unknown error occurred.";
       if (error.code === 'auth/email-already-in-use') {
@@ -84,6 +84,29 @@ export default function SignupPage() {
     return (
         <div className="flex h-screen w-full items-center justify-center bg-background">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        </div>
+    );
+  }
+
+  if (signupSuccess) {
+    return (
+        <div className="flex items-center justify-center min-h-screen bg-muted/40">
+            <Card className="w-full max-w-sm text-center">
+                <CardHeader>
+                    <CardTitle className="text-2xl font-headline flex items-center justify-center gap-2">
+                        <CheckCircle className="h-8 w-8 text-green-500" />
+                        Account Created!
+                    </CardTitle>
+                    <CardDescription>
+                        Your account for <span className="font-semibold text-foreground">{registeredEmail}</span> has been successfully created.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Button onClick={() => router.push('/login')}>
+                        Proceed to Sign In
+                    </Button>
+                </CardContent>
+            </Card>
         </div>
     );
   }
