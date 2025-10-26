@@ -16,14 +16,14 @@
         },
         "content": {
           "type": "string",
-          "description": "Content of the diary entry, can include rich text formatting."
+          "description": "Content of the diary entry, stored as rich text."
         },
         "dateCreated": {
           "type": "string",
           "description": "Date and time when the diary entry was created.",
           "format": "date-time"
         },
-        "lastModified": {
+        "dateModified": {
           "type": "string",
           "description": "Date and time when the diary entry was last modified.",
           "format": "date-time"
@@ -44,18 +44,11 @@
         },
         "mood": {
           "type": "string",
-          "description": "The mood associated with the diary entry (e.g., happy, sad, neutral)."
+          "description": "The users mood associated with the journal entry"
         },
         "weather": {
           "type": "string",
-          "description": "The weather associated with the diary entry (e.g., sunny, rainy, cloudy)."
-        },
-        "attachmentIds": {
-          "type": "array",
-          "description": "References to Attachments. (Relationship: Attachment 1:N DiaryEntry)",
-          "items": {
-            "type": "string"
-          }
+          "description": "The weather associated with the journal entry"
         }
       },
       "required": [
@@ -63,7 +56,7 @@
         "title",
         "content",
         "dateCreated",
-        "lastModified"
+        "dateModified"
       ]
     },
     "Category": {
@@ -78,7 +71,7 @@
         },
         "name": {
           "type": "string",
-          "description": "Name of the category."
+          "description": "Name of the category (e.g., 'Work', 'Travel')."
         },
         "description": {
           "type": "string",
@@ -110,77 +103,56 @@
         "name"
       ]
     },
-    "Attachment": {
+    "AppUser": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Attachment",
+      "title": "AppUser",
       "type": "object",
-      "description": "Represents an attachment associated with a diary entry.",
+      "description": "Represents a user of the diary application.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the Attachment entity."
-        },
-        "fileName": {
-          "type": "string",
-          "description": "Name of the attached file."
-        },
-        "fileType": {
-          "type": "string",
-          "description": "Type of the attached file (e.g., image, video, audio)."
-        },
-        "fileSize": {
-          "type": "number",
-          "description": "Size of the attached file in bytes."
-        },
-        "uploadDate": {
-          "type": "string",
-          "description": "Date and time when the file was uploaded.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "fileName",
-        "fileType",
-        "fileSize",
-        "uploadDate"
-      ]
-    },
-    "UserAccount": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "UserAccount",
-      "type": "object",
-      "description": "Represents a user account for the application.  Note:  This entity does NOT store the user password.  It is assumed that authentication is handled by an external service.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the UserAccount entity."
+          "description": "Unique identifier for the AppUser entity."
         },
         "email": {
           "type": "string",
           "description": "Email address of the user.",
           "format": "email"
-        },
-        "displayName": {
+        }
+      },
+      "required": [
+        "id",
+        "email"
+      ]
+    },
+    "PasswordResetRequest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PasswordResetRequest",
+      "type": "object",
+      "description": "Represents a password reset request.",
+      "properties": {
+        "id": {
           "type": "string",
-          "description": "Display name of the user."
+          "description": "Unique identifier for the PasswordResetRequest entity."
         },
-        "dateCreated": {
+        "userId": {
           "type": "string",
-          "description": "Date and time when the user account was created.",
-          "format": "date-time"
+          "description": "Reference to AppUser. (Relationship: AppUser 1:N PasswordResetRequest)"
         },
-        "lastLogin": {
+        "resetToken": {
           "type": "string",
-          "description": "Date and time of the user's last login.",
+          "description": "The reset token."
+        },
+        "expirationDate": {
+          "type": "string",
+          "description": "The expiration date and time for the reset token.",
           "format": "date-time"
         }
       },
       "required": [
         "id",
-        "email",
-        "displayName",
-        "dateCreated"
+        "userId",
+        "resetToken",
+        "expirationDate"
       ]
     }
   },
@@ -195,15 +167,15 @@
       {
         "path": "/users/{userId}",
         "definition": {
-          "entityName": "UserAccount",
+          "entityName": "AppUser",
           "schema": {
-            "$ref": "#/backend/entities/UserAccount"
+            "$ref": "#/backend/entities/AppUser"
           },
-          "description": "Stores user account information.  Each document represents a user. The userId is the firebase auth uid",
+          "description": "Stores user profiles. Secured by checking if request.auth.uid == userId.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier for the user, corresponding to the Firebase Auth UID."
+              "description": "The unique identifier for the user."
             }
           ]
         }
@@ -215,11 +187,11 @@
           "schema": {
             "$ref": "#/backend/entities/DiaryEntry"
           },
-          "description": "Stores diary entries for a specific user. Path-based ownership enables secure list operations. Includes denormalized 'userId' for authorization independence. Each document represents a single diary entry.",
+          "description": "Stores diary entries for each user. The userId in the path ensures only the authenticated user can access their entries.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier for the user, corresponding to the Firebase Auth UID."
+              "description": "The unique identifier for the user."
             },
             {
               "name": "diaryEntryId",
@@ -229,34 +201,18 @@
         }
       },
       {
-        "path": "/users/{userId}/attachments/{attachmentId}",
-        "definition": {
-          "entityName": "Attachment",
-          "schema": {
-            "$ref": "#/backend/entities/Attachment"
-          },
-          "description": "Stores attachments for a specific user's diary entries. Path-based ownership enables secure list operations.  Includes denormalized 'userId' for authorization independence. Each document represents a single attachment.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user, corresponding to the Firebase Auth UID."
-            },
-            {
-              "name": "attachmentId",
-              "description": "The unique identifier for the attachment."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/categories/{categoryId}",
+        "path": "/users/{userId}/categories/{categoryId}",
         "definition": {
           "entityName": "Category",
           "schema": {
             "$ref": "#/backend/entities/Category"
           },
-          "description": "Stores global categories that can be used by all users.",
+          "description": "Categories are private to each user and stored under their respective document.",
           "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
             {
               "name": "categoryId",
               "description": "The unique identifier for the category."
@@ -265,22 +221,42 @@
         }
       },
       {
-        "path": "/tags/{tagId}",
+        "path": "/users/{userId}/tags/{tagId}",
         "definition": {
           "entityName": "Tag",
           "schema": {
             "$ref": "#/backend/entities/Tag"
           },
-          "description": "Stores global tags that can be used by all users.",
+          "description": "Tags are private to each user and stored under their respective document.",
           "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
             {
               "name": "tagId",
               "description": "The unique identifier for the tag."
             }
           ]
         }
+      },
+      {
+        "path": "/password_reset_requests/{passwordResetRequestId}",
+        "definition": {
+          "entityName": "PasswordResetRequest",
+          "schema": {
+            "$ref": "#/backend/entities/PasswordResetRequest"
+          },
+          "description": "Stores password reset requests. Relies on checking the userId in the document against the authenticated user to verify ownership before allowing a password reset.",
+          "params": [
+            {
+              "name": "passwordResetRequestId",
+              "description": "The unique identifier for the password reset request."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore structure is designed to ensure security, scalability, and debuggability, following the principles of Authorization Independence, Clarity of Intent, DBAC (Database-Based Access Control), and QAPs (Rules are not Filters).  Authorization Independence is achieved by path-based ownership for diary entries and password reset tokens.  The structure facilitates secure `list` operations by segregating data based on ownership (user ID). The user's `DiaryEntry` and `Attachment` data are stored in subcollections under the user's document (`/users/{userId}`). This eliminates the need for complex rules based on document content, simplifies security rules, and avoids the need for `get()` calls to parent documents during authorization, enabling atomic operations. Data segregation (e.g., separate collections for `users` and their `DiaryEntry` data) ensures a homogeneous security posture, where all documents within a collection share the same security requirements."
+    "reasoning": "The Firestore structure is designed to ensure security, scalability, and ease of debugging, following the principles of Authorization Independence, Clarity of Intent, DBAC (Database-Based Access Control), and QAPs (Rules are not Filters). Authorization Independence is achieved through denormalization, specifically by storing user-related data within the user's document or subcollections. Structural Segregation is maintained by grouping data with similar access requirements into dedicated collections. Access Modeling uses path-based ownership for user-owned data and membership maps for collaborative data (although collaborative features are not present in the current feature set). Global roles are managed through existence checks in dedicated collections. The design also emphasizes data clarity with explicit state modeling and consistent naming conventions.\n\nThe structure employs the following:\n\n1.  **Users Collection (`/users/{userId}`):** Stores user profiles. This collection is secured by checking if `request.auth.uid == userId`.\n2.  **Diary Entries Collection (`/users/{userId}/diaryEntries/{diaryEntryId}`):** Stores diary entries for each user. The `userId` in the path ensures only the authenticated user can access their entries.  The structure enables list operations since entries are secured by path-based ownership.\n3.  **Categories Collection (`/users/{userId}/categories/{categoryId}`):** Categories are private to each user and stored under their respective document.\n4.  **Tags Collection (`/users/{userId}/tags/{tagId}`):** Tags are private to each user and stored under their respective document.\n5.  **Password Reset Requests Collection (`/password_reset_requests/{passwordResetRequestId}`):** Stores password reset requests. This uses a flat collection to manage requests without hierarchical dependencies. It relies on checking the `userId` in the document against the authenticated user to verify ownership before allowing a password reset.  This approach is simpler and more secure than using subcollections when handling sensitive operations like password resets.\n\nThis structure ensures that access control is straightforward and efficient, reducing the need for complex rules. Each collection's security rules can be independently defined, minimizing the risk of unintended access and simplifies debugging."
   }
 }

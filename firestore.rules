@@ -1,130 +1,147 @@
+/**
+ * @file Firebase Security Rules for Firestore.
+ *
+ * @Core Philosophy: This ruleset enforces a strict user-ownership model for most data,
+ * ensuring users can only access their own data.  Password reset requests are handled
+ * in a separate collection with specific ownership checks.
+ *
+ * @Data Structure:
+ * - /users/{userId}: Stores user profiles, accessible only to the user themselves.
+ * - /users/{userId}/diaryEntries/{diaryEntryId}: Stores diary entries, accessible only to the owner.
+ * - /users/{userId}/categories/{categoryId}: Stores categories, accessible only to the owner.
+ * - /users/{userId}/tags/{tagId}: Stores tags, accessible only to the owner.
+ * - /password_reset_requests/{passwordResetRequestId}: Stores password reset requests,
+ *   accessible only to the user associated with the request and only under specific conditions.
+ *
+ * @Key Security Decisions:
+ * - User data is strictly private.
+ * - Listing of users is not permitted.
+ * - Data validation is relaxed during prototyping. Only ownership and relational integrity are validated.
+ *
+ * @Denormalization for Authorization:
+ *   The rules rely on the `userId` being present in the path and/or the document to enforce ownership.
+ *   For example, diary entries are stored under `/users/{userId}/diaryEntries/{diaryEntryId}` and
+ *   access is controlled by verifying that `request.auth.uid` matches the `userId` in the path.
+ *   Password reset requests have a `userId` field in the document that is used to verify ownership.
+ *
+ * @Structural Segregation:
+ *   Password reset requests are stored in a separate, top-level collection to simplify security rules
+ *   and avoid unnecessary nesting under the user document.
+ */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Checks if the request is authenticated.
-     */
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    /**
-     * @description Checks if the authenticated user's UID matches the provided userId.
-     */
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    /**
-     * @description Checks if the authenticated user's UID matches the provided userId, and that the resource exists.
-     */
-    function isExistingOwner(userId) {
-      return isOwner(userId) && exists(resource.data);
-    }
-    
-    function exists(data) {
-        return data is map
-    }
-
-    /**
-     * @description Rules for the /users/{userId} collection.
+     * @description Secure user profiles. Only the authenticated user can access their own profile.
      * @path /users/{userId}
-     * @allow (create) User with UID 'user123' can create their own user document.
-     * @deny (create) User with UID 'user123' cannot create a user document with a different ID ('user456').
-     * @allow (get) User with UID 'user123' can read their own user document.
-     * @deny (get) User with UID 'user123' cannot read another user's document.
-     * @principle Enforces document ownership for writes and restricts access to a user's own data.
+     * @allow (create) - Authenticated user creates their own profile.
+     * @allow (get, update, delete) - Authenticated user accesses their own profile.
+     * @deny (create) - Authenticated user attempts to create a profile with a different ID.
+     * @deny (get, update, delete) - Authenticated user attempts to access another user's profile.
+     * @principle Enforces document ownership for reads and writes. Validates relational integrity on create and update.
      */
     match /users/{userId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
       allow get: if isOwner(userId);
       allow list: if false;
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+      allow create: if request.auth.uid == userId;
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Rules for the /users/{userId}/diaryEntries/{diaryEntryId} collection.
+     * @description Secure diary entries. Only the owner can access their own entries.
      * @path /users/{userId}/diaryEntries/{diaryEntryId}
-     * @allow (create) User with UID 'user123' can create a diary entry under their user document.
-     * @deny (create) User with UID 'user123' cannot create a diary entry under another user's document ('user456').
-     * @allow (get) User with UID 'user123' can read their own diary entry.
-     * @deny (get) User with UID 'user123' cannot read a diary entry from another user ('user456').
-     * @principle Enforces document ownership for writes and restricts access to a user's own data.
+     * @allow (create, get, list, update, delete) - Authenticated user accesses their own diary entries.
+     * @deny (create, get, list, update, delete) - Authenticated user attempts to access another user's diary entries.
+     * @principle Enforces document ownership for all operations.
      */
     match /users/{userId}/diaryEntries/{diaryEntryId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+       function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
       allow get: if isOwner(userId);
       allow list: if isOwner(userId);
       allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Rules for the /users/{userId}/attachments/{attachmentId} collection.
-     * @path /users/{userId}/attachments/{attachmentId}
-     * @allow (create) User with UID 'user123' can create an attachment under their user document.
-     * @deny (create) User with UID 'user123' cannot create an attachment under another user's document ('user456').
-     * @allow (get) User with UID 'user123' can read their own attachment.
-     * @deny (get) User with UID 'user123' cannot read an attachment from another user ('user456').
-     * @principle Enforces document ownership for writes and restricts access to a user's own data.
+     * @description Secure categories. Only the owner can access their own categories.
+     * @path /users/{userId}/categories/{categoryId}
+     * @allow (create, get, list, update, delete) - Authenticated user accesses their own categories.
+     * @deny (create, get, list, update, delete) - Authenticated user attempts to access another user's categories.
+     * @principle Enforces document ownership for all operations.
      */
-    match /users/{userId}/attachments/{attachmentId} {
+    match /users/{userId}/categories/{categoryId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+       function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
       allow get: if isOwner(userId);
       allow list: if isOwner(userId);
       allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Rules for the /categories/{categoryId} collection.
-     * @path /categories/{categoryId}
-     * @allow (get) Any user can read a category.
-     * @allow (list) Any user can list categories.
-     * @deny (create) No user can create categories.
-     * @principle Allows public read access to categories.
+     * @description Secure tags. Only the owner can access their own tags.
+     * @path /users/{userId}/tags/{tagId}
+     * @allow (create, get, list, update, delete) - Authenticated user accesses their own tags.
+     * @deny (create, get, list, update, delete) - Authenticated user attempts to access another user's tags.
+     * @principle Enforces document ownership for all operations.
      */
-    match /categories/{categoryId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
-    }
+    match /users/{userId}/tags/{tagId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
 
-    /**
-     * @description Rules for the /tags/{tagId} collection.
-     * @path /tags/{tagId}
-     * @allow (get) Any user can read a tag.
-     * @allow (list) Any user can list tags.
-     * @deny (create) No user can create tags.
-     * @principle Allows public read access to tags.
-     */
-    match /tags/{tagId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
-    }
+       function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
 
-    /**
-     * @description Rules for the /users/{userId}/passwordResetTokens/{passwordResetTokenId} collection.
-     * @path /users/{userId}/passwordResetTokens/{passwordResetTokenId}
-     * @allow (create) User with UID 'user123' can create a password reset token under their user document.
-     * @deny (create) User with UID 'user123' cannot create a password reset token under another user's document ('user456').
-     * @allow (get) User with UID 'user123' can read their own password reset token.
-     * @deny (get) User with UID 'user123' cannot read a password reset token from another user ('user456').
-     * @principle Enforces document ownership for writes and restricts access to a user's own data.
-     */
-    match /users/{userId}/passwordResetTokens/{passwordResetTokenId} {
       allow get: if isOwner(userId);
       allow list: if isOwner(userId);
       allow create: if isOwner(userId);
-      allow update: if false;
-      allow delete: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Secure password reset requests. Only the user associated with the request can access it, and only under specific conditions.
+     * @path /password_reset_requests/{passwordResetRequestId}
+     * @allow (create) - Any authenticated user can create a password reset request.
+     * @allow (get) - The user associated with the request can get the request.
+     * @allow (update, delete) -  No one can update or delete a password reset request.
+     * @deny (get) - Another user attempts to access the request.
+     * @deny (create, update, delete) - Unauthenticated user attempts to create, update, or delete a request.
+     * @principle Enforces document ownership and restricts access to password reset requests.
+     */
+    match /password_reset_requests/{passwordResetRequestId} {
+        allow get: if request.auth.uid == resource.data.userId;
+        allow list: if false;
+        allow create: if request.auth.uid != null && request.resource.data.userId == request.auth.uid;
+        allow update: if false;
+        allow delete: if false;
     }
   }
 }
