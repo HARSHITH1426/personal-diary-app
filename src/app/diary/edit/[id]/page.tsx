@@ -28,6 +28,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { getWritingPromptAction } from '@/app/actions';
 
+// Defines the shape of the form data and validation rules using Zod.
+// This ensures that the user cannot submit the form with an empty title or content.
 const formSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
   content: z.string().min(1, 'Content cannot be empty.'),
@@ -35,12 +37,16 @@ const formSchema = z.object({
 });
 
 export default function EditEntryPage() {
+  // This hook syncs the local Zustand store with Firestore data.
+  // It's crucial for ensuring the form is populated with the latest data.
   useSyncDiaryStore();
   const router = useRouter();
   const params = useParams();
   const { id } = params;
   const entryId = Array.isArray(id) ? id[0] : id;
 
+  // We select the specific entry and the store's actions.
+  // This approach is efficient because the component only re-renders when this specific data changes.
   const { entry, actions, entries } = useDiaryStore(state => ({
     entry: state.entries.find(e => e.id === entryId),
     actions: state.actions,
@@ -48,10 +54,13 @@ export default function EditEntryPage() {
   }));
   
   const { toast } = useToast();
+  // useTransition is a React Hook that lets you update the state without blocking the UI.
+  // Here, it's used to show loading spinners on buttons during form submission or deletion.
   const [isPending, startTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
   const [isPromptLoading, startPromptTransition] = useTransition();
 
+  // Initialize react-hook-form with the Zod schema for validation.
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -61,6 +70,8 @@ export default function EditEntryPage() {
     },
   });
 
+  // This useEffect hook populates the form with the entry's data once it's loaded.
+  // It runs whenever the `entry` object changes.
   useEffect(() => {
     if (entry) {
       form.reset({
@@ -71,24 +82,28 @@ export default function EditEntryPage() {
     }
   }, [entry, form]);
 
+  // This function is called when the form is submitted and valid.
   function onSubmit(values: z.infer<typeof formSchema>) {
     if (!entry) return;
 
+    // We wrap the state update in startTransition to avoid locking the UI.
     startTransition(() => {
       actions.updateEntry({
         ...entry,
         title: values.title,
         content: values.content,
+        // The tags input is a string, so we convert it to an array of strings.
         tags: values.tags?.split(',').map(t => t.trim()).filter(Boolean) || [],
       });
       toast({
         title: 'Entry updated!',
         description: 'Your changes have been saved.',
       });
-      router.push('/diary');
+      router.push('/diary'); // Navigate back to the main diary page after update.
     });
   }
 
+  // Handles the deletion of the entry.
   const handleDelete = () => {
     if (!entry) return;
     startDeleteTransition(() => {
@@ -101,8 +116,10 @@ export default function EditEntryPage() {
     });
   };
 
+  // Fetches an AI-generated writing prompt and appends it to the content.
   const handleGeneratePrompt = () => {
     startPromptTransition(async () => {
+        // We collect text from past entries to give the AI some context.
         const pastEntriesText = entries
             .filter(e => e.id !== entryId)
             .slice(0, 5)
@@ -128,6 +145,7 @@ export default function EditEntryPage() {
     });
   };
 
+  // If the entry hasn't been loaded yet (e.g., on a page refresh), show a loading message.
   if (!entry) {
     return <div className="text-center p-8">Loading entry...</div>;
   }
