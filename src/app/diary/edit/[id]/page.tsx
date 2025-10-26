@@ -28,25 +28,32 @@ import {
 } from '@/components/ui/alert-dialog';
 import { getWritingPromptAction } from '@/app/actions';
 
-// Defines the shape of the form data and validation rules using Zod.
-// This ensures that the user cannot submit the form with an empty title or content.
+// I've defined the form's structure and validation rules here using Zod.
+// This ensures that an entry must have a title and content before it can be saved.
 const formSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
   content: z.string().min(1, 'Content cannot be empty.'),
   tags: z.string().optional(),
 });
 
+// A helper function to process tags from a string to an array.
+// This keeps the logic separate and reusable.
+const processTags = (tagsString?: string): string[] => {
+  if (!tagsString) return [];
+  return tagsString.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+}
+
 export default function EditEntryPage() {
-  // This hook syncs the local Zustand store with Firestore data.
-  // It's crucial for ensuring the form is populated with the latest data.
+  // This custom hook keeps the local state in sync with Firestore. It's essential
+  // for making sure the data loaded on this page is always fresh.
   useSyncDiaryStore();
   const router = useRouter();
   const params = useParams();
   const { id } = params;
   const entryId = Array.isArray(id) ? id[0] : id;
 
-  // We select the specific entry and the store's actions.
-  // This approach is efficient because the component only re-renders when this specific data changes.
+  // I'm selecting only the specific data this component needs from the global store.
+  // This is a performance optimization: the component only re-renders if this data changes.
   const { entry, actions, entries } = useDiaryStore(state => ({
     entry: state.entries.find(e => e.id === entryId),
     actions: state.actions,
@@ -54,13 +61,14 @@ export default function EditEntryPage() {
   }));
   
   const { toast } = useToast();
-  // useTransition is a React Hook that lets you update the state without blocking the UI.
-  // Here, it's used to show loading spinners on buttons during form submission or deletion.
-  const [isPending, startTransition] = useTransition();
+  // useTransition is a React Hook that lets you update state without blocking the UI.
+  // I use it here to show loading spinners on buttons during async operations like saving or deleting.
+  const [isSaving, startSaveTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
-  const [isPromptLoading, startPromptTransition] = useTransition();
+  const [isGeneratingPrompt, startPromptGeneration] = useTransition();
 
-  // Initialize react-hook-form with the Zod schema for validation.
+  // I'm initializing react-hook-form here. It uses the Zod schema for validation
+  // and sets default values for the form fields.
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -70,8 +78,8 @@ export default function EditEntryPage() {
     },
   });
 
-  // This useEffect hook populates the form with the entry's data once it's loaded.
-  // It runs whenever the `entry` object changes.
+  // This `useEffect` hook's purpose is to populate the form fields when the entry data loads.
+  // It watches the `entry` object, and when it becomes available, it resets the form with the entry's data.
   useEffect(() => {
     if (entry) {
       form.reset({
@@ -82,29 +90,29 @@ export default function EditEntryPage() {
     }
   }, [entry, form]);
 
-  // This function is called when the form is submitted and valid.
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  // This function handles the form submission. I've named it to be descriptive of its action.
+  function handleUpdateEntry(values: z.infer<typeof formSchema>) {
     if (!entry) return;
 
-    // We wrap the state update in startTransition to avoid locking the UI.
-    startTransition(() => {
+    // By wrapping the update logic in `startTransition`, I ensure the UI remains responsive
+    // while the update operation is processed in the background.
+    startSaveTransition(() => {
       actions.updateEntry({
         ...entry,
         title: values.title,
         content: values.content,
-        // The tags input is a string, so we convert it to an array of strings.
-        tags: values.tags?.split(',').map(t => t.trim()).filter(Boolean) || [],
+        tags: processTags(values.tags),
       });
       toast({
         title: 'Entry updated!',
         description: 'Your changes have been saved.',
       });
-      router.push('/diary'); // Navigate back to the main diary page after update.
+      router.push('/diary'); // After saving, I navigate the user back to the main diary page.
     });
   }
 
-  // Handles the deletion of the entry.
-  const handleDelete = () => {
+  // This function handles deleting the current entry.
+  const handleDeleteEntry = () => {
     if (!entry) return;
     startDeleteTransition(() => {
       actions.deleteEntry(entry.id);
@@ -116,13 +124,13 @@ export default function EditEntryPage() {
     });
   };
 
-  // Fetches an AI-generated writing prompt and appends it to the content.
-  const handleGeneratePrompt = () => {
-    startPromptTransition(async () => {
-        // We collect text from past entries to give the AI some context.
+  // This function calls a server action to get an AI-generated writing suggestion.
+  const getAIWritingSuggestion = () => {
+    startPromptGeneration(async () => {
+        // I collect text from recent past entries to give the AI context.
         const pastEntriesText = entries
             .filter(e => e.id !== entryId)
-            .slice(0, 5)
+            .slice(0, 5) // I'm using the 5 most recent entries for context.
             .map(e => `Title: ${e.title}\n${e.content}`)
             .join('\n---\n');
             
@@ -130,10 +138,11 @@ export default function EditEntryPage() {
 
         if ('prompt' in result && result.prompt) {
             const currentContent = form.getValues('content');
+            // I append the new prompt to the existing content.
             form.setValue('content', currentContent ? `${currentContent}\n\n${result.prompt}` : result.prompt);
             toast({
-                title: 'Prompt generated!',
-                description: 'A new writing prompt has been added to your entry.',
+                title: 'Suggestion added!',
+                description: 'A new writing suggestion has been added to your entry.',
             });
         } else if ('error' in result) {
             toast({
@@ -145,7 +154,8 @@ export default function EditEntryPage() {
     });
   };
 
-  // If the entry hasn't been loaded yet (e.g., on a page refresh), show a loading message.
+  // If the entry data is not yet available (e.g., on a page refresh),
+  // I show a clear loading message to the user.
   if (!entry) {
     return <div className="text-center p-8">Loading entry...</div>;
   }
@@ -159,7 +169,7 @@ export default function EditEntryPage() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <form onSubmit={form.handleSubmit(handleUpdateEntry)} className="space-y-8">
               <FormField
                 control={form.control}
                 name="title"
@@ -201,9 +211,9 @@ export default function EditEntryPage() {
               />
               <div className="flex flex-wrap gap-2 justify-between items-center">
                 <div className="flex gap-2">
-                    <Button type="button" variant="outline" onClick={handleGeneratePrompt} disabled={isPromptLoading}>
-                        {isPromptLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BrainCircuit className="mr-2 h-4 w-4" />}
-                        Get Prompt
+                    <Button type="button" variant="outline" onClick={getAIWritingSuggestion} disabled={isGeneratingPrompt}>
+                        {isGeneratingPrompt ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BrainCircuit className="mr-2 h-4 w-4" />}
+                        Get Suggestion
                     </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
@@ -221,7 +231,7 @@ export default function EditEntryPage() {
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={handleDelete}>Continue</AlertDialogAction>
+                          <AlertDialogAction onClick={handleDeleteEntry}>Continue</AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
@@ -230,8 +240,8 @@ export default function EditEntryPage() {
                     <Link href="/diary" passHref>
                         <Button variant="outline">Cancel</Button>
                     </Link>
-                  <Button type="submit" disabled={isPending}>
-                    {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                  <Button type="submit" disabled={isSaving}>
+                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                     Save Changes
                   </Button>
                 </div>

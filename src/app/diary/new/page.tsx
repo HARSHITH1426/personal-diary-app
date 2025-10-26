@@ -28,8 +28,8 @@ export default function NewEntryPage() {
   const router = useRouter();
   const { actions, entries } = useDiaryStore(state => ({ actions: state.actions, entries: state.entries }));
   const { toast } = useToast();
-  const [isPending, startTransition] = useTransition();
-  const [isPromptLoading, startPromptTransition] = useTransition();
+  const [isSaving, startSaveTransition] = useTransition();
+  const [isGeneratingPrompt, startPromptGeneration] = useTransition();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -40,8 +40,8 @@ export default function NewEntryPage() {
     },
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    startTransition(async () => {
+  async function handleCreateEntry(values: z.infer<typeof formSchema>) {
+    startSaveTransition(async () => {
       try {
         const newEntryId = await actions.addEntry({
           title: values.title,
@@ -63,8 +63,8 @@ export default function NewEntryPage() {
     });
   }
   
-  const handleGeneratePrompt = () => {
-    startPromptTransition(async () => {
+  const getAIWritingSuggestion = () => {
+    startPromptGeneration(async () => {
         const pastEntriesText = entries
             .slice(0, 5) // Use recent 5 entries for context
             .map(e => `Title: ${e.title}\n${e.content}`)
@@ -76,8 +76,8 @@ export default function NewEntryPage() {
             const currentContent = form.getValues('content');
             form.setValue('content', currentContent ? `${currentContent}\n\n${result.prompt}` : result.prompt);
             toast({
-                title: 'Prompt generated!',
-                description: 'A new writing prompt has been added to your entry.',
+                title: 'Suggestion added!',
+                description: 'A new writing suggestion has been added to your entry.',
             });
         } else if ('error' in result) {
             toast({
@@ -98,7 +98,7 @@ export default function NewEntryPage() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <form onSubmit={form.handleSubmit(handleCreateEntry)} className="space-y-8">
               <FormField
                 control={form.control}
                 name="title"
@@ -143,16 +143,16 @@ export default function NewEntryPage() {
                 )}
               />
               <div className="flex flex-wrap gap-2 justify-between items-center">
-                <Button type="button" variant="outline" onClick={handleGeneratePrompt} disabled={isPromptLoading}>
-                    {isPromptLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BrainCircuit className="mr-2 h-4 w-4" />}
-                    Get a Writing Prompt
+                <Button type="button" variant="outline" onClick={getAIWritingSuggestion} disabled={isGeneratingPrompt}>
+                    {isGeneratingPrompt ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BrainCircuit className="mr-2 h-4 w-4" />}
+                    Get a Writing Suggestion
                 </Button>
                 <div className="flex gap-2">
                    <Link href="/diary" passHref>
                     <Button variant="outline">Cancel</Button>
                    </Link>
-                  <Button type="submit" disabled={isPending}>
-                    {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                  <Button type="submit" disabled={isSaving}>
+                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                     Save Entry
                   </Button>
                 </div>
