@@ -3,9 +3,9 @@
 import React from "react";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
-import { BookOpen, PlusCircle } from "lucide-react";
+import { BookOpen, PlusCircle, Loader2 } from "lucide-react";
 
-import { useFilteredEntries } from "@/hooks/use-diary-store";
+import { useFilteredEntries, useDiaryStore } from "@/hooks/use-diary-store";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,12 +13,14 @@ import { DiaryEntry } from "@/lib/types";
 
 function EntryCard({ entry }: { entry: DiaryEntry }) {
   const contentSnippet = entry.content.substring(0, 150);
+  const entryDate = entry.date ? parseISO(entry.date) : new Date();
+
   return (
     <Link href={`/diary/edit/${entry.id}`} className="block">
       <Card className="hover:shadow-md transition-shadow duration-200 h-full flex flex-col">
         <CardHeader>
           <CardTitle className="font-headline">{entry.title}</CardTitle>
-          <CardDescription>{format(parseISO(entry.date), "MMMM d, yyyy 'at' h:mm a")}</CardDescription>
+          <CardDescription>{format(entryDate, "MMMM d, yyyy 'at' h:mm a")}</CardDescription>
         </CardHeader>
         <CardContent className="flex-grow">
           <p className="text-sm text-muted-foreground">{contentSnippet}{entry.content.length > 150 ? "..." : ""}</p>
@@ -40,6 +42,15 @@ function EntryCard({ entry }: { entry: DiaryEntry }) {
 
 export default function DiaryPage() {
   const filteredEntries = useFilteredEntries();
+  const { isLoading } = useDiaryStore();
+
+  if (isLoading) {
+    return (
+        <div className="flex h-full w-full items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+    )
+  }
 
   if (filteredEntries.length === 0) {
     return (

@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Lock, LogIn, Loader2, Mail } from 'lucide-react';
+import { Mail, Lock, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useToast } from '@/hooks/use-toast';
+
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -25,20 +25,23 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
 import { useAuth, useUser } from '@/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 
-const loginSchema = z.object({
-  email: z.string().email('Invalid email address.'),
-  password: z.string().min(1, 'Password is required.'),
+const signupSchema = z.object({
+  email: z.string().email('Please enter a valid email address.'),
+  password: z.string().min(6, 'Password must be at least 6 characters long.'),
 });
 
-export default function LoginPage() {
+export default function SignupPage() {
   const router = useRouter();
   const { toast } = useToast();
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [signupSuccess, setSignupSuccess] = useState(false);
+  const [signupEmail, setSignupEmail] = useState('');
 
   useEffect(() => {
     if (!isUserLoading && user) {
@@ -46,36 +49,59 @@ export default function LoginPage() {
     }
   }, [user, isUserLoading, router]);
 
-  const form = useForm<z.infer<typeof loginSchema>>({
-    resolver: zodResolver(loginSchema),
+  const form = useForm<z.infer<typeof signupSchema>>({
+    resolver: zodResolver(signupSchema),
     defaultValues: {
       email: '',
       password: '',
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof loginSchema>) => {
+  const onSubmit = async (values: z.infer<typeof signupSchema>) => {
     setIsSubmitting(true);
     try {
-      await signInWithEmailAndPassword(auth, values.email, values.password);
-      router.push('/diary');
+      await createUserWithEmailAndPassword(auth, values.email, values.password);
+      setSignupEmail(values.email);
+      setSignupSuccess(true);
     } catch (error: any) {
       toast({
         variant: 'destructive',
-        title: 'Authentication failed',
+        title: 'Sign-up failed',
         description:
-          error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential'
-            ? 'Invalid email or password.'
+          error.code === 'auth/email-already-in-use'
+            ? 'This email address is already in use.'
             : 'An unexpected error occurred. Please try again.',
       });
       setIsSubmitting(false);
     }
   };
 
-  if (isUserLoading || user) {
+  if (isUserLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (signupSuccess) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-muted/40">
+        <Card className="w-full max-w-sm text-center">
+          <CardHeader>
+            <CardTitle className="text-2xl font-headline">Welcome!</CardTitle>
+            <CardDescription>
+              Your account for <span className='font-medium text-foreground'>{signupEmail}</span> has been created.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/diary">
+              <Button className="w-full">
+                Continue to your diary
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -84,12 +110,9 @@ export default function LoginPage() {
     <div className="flex items-center justify-center min-h-screen bg-muted/40">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-          <div className="mx-auto bg-primary text-primary-foreground rounded-full p-3 w-fit mb-4">
-            <Lock className="h-6 w-6" />
-          </div>
-          <CardTitle className="text-2xl font-headline">Core Diary</CardTitle>
+          <CardTitle className="text-2xl font-headline">Create an Account</CardTitle>
           <CardDescription>
-            Enter your credentials to access your journal.
+            Join Core Diary to start your personal journal.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -137,28 +160,18 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
-              <div className="text-sm text-right">
-                <Link
-                  href="/forgot-password"
-                  className="font-medium text-primary hover:underline"
-                >
-                  Forgot password?
-                </Link>
-              </div>
               <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <LogIn className="mr-2 h-4 w-4" />
-                )}
-                Login
+                ) : null}
+                Sign Up
               </Button>
             </form>
           </Form>
           <div className="mt-4 text-center text-sm">
-            Don&apos;t have an account?{' '}
-            <Link href="/signup" className="font-medium text-primary hover:underline">
-              Sign up
+            Already have an account?{' '}
+            <Link href="/login" className="font-medium text-primary hover:underline">
+              Login
             </Link>
           </div>
         </CardContent>

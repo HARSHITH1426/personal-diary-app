@@ -8,7 +8,7 @@ import * as z from 'zod';
 import { BrainCircuit, Loader2, Save, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 
-import { useDiaryStore } from '@/hooks/use-diary-store';
+import { useDiaryStore, useSyncDiaryStore } from '@/hooks/use-diary-store';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -35,6 +35,7 @@ const formSchema = z.object({
 });
 
 export default function EditEntryPage() {
+  useSyncDiaryStore();
   const router = useRouter();
   const params = useParams();
   const { id } = params;
@@ -67,12 +68,8 @@ export default function EditEntryPage() {
         content: entry.content,
         tags: Array.isArray(entry.tags) ? entry.tags.join(', ') : '',
       });
-    } else {
-        // If entry is not found (e.g., on direct navigation), redirect
-        const timer = setTimeout(() => router.push('/diary'), 1000);
-        return () => clearTimeout(timer);
     }
-  }, [entry, form, router]);
+  }, [entry, form]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     if (!entry) return;
@@ -132,7 +129,7 @@ export default function EditEntryPage() {
   };
 
   if (!entry) {
-    return <div className="text-center p-8">Entry not found. Redirecting...</div>;
+    return <div className="text-center p-8">Loading entry...</div>;
   }
 
   return (

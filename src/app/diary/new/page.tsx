@@ -8,7 +8,7 @@ import * as z from 'zod';
 import { BrainCircuit, Loader2, Save } from 'lucide-react';
 import Link from 'next/link';
 
-import { useDiaryStore } from '@/hooks/use-diary-store';
+import { useDiaryStore, useSyncDiaryStore } from '@/hooks/use-diary-store';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -24,6 +24,7 @@ const formSchema = z.object({
 });
 
 export default function NewEntryPage() {
+  useSyncDiaryStore();
   const router = useRouter();
   const { actions, entries } = useDiaryStore(state => ({ actions: state.actions, entries: state.entries }));
   const { toast } = useToast();
@@ -39,18 +40,26 @@ export default function NewEntryPage() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    startTransition(() => {
-      const newEntryId = actions.addEntry({
-        title: values.title,
-        content: values.content,
-        tags: values.tags || '',
-      });
-      toast({
-        title: 'Entry saved!',
-        description: 'Your new diary entry has been successfully created.',
-      });
-      router.push(`/diary/edit/${newEntryId}`);
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    startTransition(async () => {
+      try {
+        const newEntryId = await actions.addEntry({
+          title: values.title,
+          content: values.content,
+          tags: values.tags || '',
+        });
+        toast({
+          title: 'Entry saved!',
+          description: 'Your new diary entry has been successfully created.',
+        });
+        router.push(`/diary/edit/${newEntryId}`);
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: 'Failed to save entry',
+          description: 'An error occurred while saving your entry.',
+        });
+      }
     });
   }
   

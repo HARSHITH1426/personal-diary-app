@@ -23,34 +23,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
-
-const AUTH_KEY = "core-diary-auth";
-
-function useAppAuth() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const router = useRouter();
-
-  useEffect(() => {
-    try {
-      const authStatus = localStorage.getItem(AUTH_KEY) === "true";
-      setIsAuthenticated(authStatus);
-      if (!authStatus) {
-        router.push("/login");
-      }
-    } catch (error) {
-      setIsAuthenticated(false);
-      router.push("/login");
-    }
-  }, [router]);
-  
-  const logout = () => {
-    localStorage.removeItem(AUTH_KEY);
-    setIsAuthenticated(false);
-    router.push('/login');
-  };
-
-  return { isAuthenticated, logout };
-}
+import { useAuth, useUser } from "@/firebase";
+import { signOut } from "firebase/auth";
 
 
 function ThemeToggle() {
@@ -89,7 +63,12 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
     actions: state.actions
   }));
   const pathname = usePathname();
-  const { logout } = useAppAuth();
+  const auth = useAuth();
+  
+  const handleLogout = async () => {
+    await signOut(auth);
+    // The useUser hook will trigger a redirect to /login
+  };
   
   const handleLinkClick = () => {
     onNavigate?.();
@@ -160,7 +139,7 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
       <div className="p-4 border-t flex justify-between items-center">
         <ThemeToggle />
-        <Button variant="ghost" onClick={logout}>
+        <Button variant="ghost" onClick={handleLogout}>
           <LogOut className="mr-2 h-4 w-4" /> Logout
         </Button>
       </div>
@@ -173,18 +152,17 @@ export default function DiaryLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { isAuthenticated } = useAppAuth();
-  const { actions, initialized } = useDiaryStore(state => ({ actions: state.actions, initialized: state.initialized }));
+  const { user, isUserLoading } = useUser();
+  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    if (!initialized) {
-      actions.initialize();
+    if (!isUserLoading && !user) {
+      router.replace('/login');
     }
-  }, [initialized, actions]);
+  }, [user, isUserLoading, router]);
 
-
-  if (isAuthenticated === null || !isAuthenticated) {
+  if (isUserLoading || !user) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
