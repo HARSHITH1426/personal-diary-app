@@ -11,6 +11,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DiaryEntry } from "@/lib/types";
 
+// This is a great place for a comment! For example:
+// The EntryCard component is responsible for displaying a single diary entry
+// in a summary view. It shows the title, date, a snippet of the content,
+// and any associated tags. Clicking it navigates to the edit page.
 function EntryCard({ entry }: { entry: DiaryEntry }) {
   const contentSnippet = entry.content.substring(0, 150);
   const entryDate = entry.date ? parseISO(entry.date) : new Date();
