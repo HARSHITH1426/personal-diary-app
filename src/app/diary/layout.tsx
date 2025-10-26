@@ -11,6 +11,7 @@ import {
   Search,
   Settings,
   Sun,
+  BookHeart
 } from "lucide-react";
 
 import { useDiaryStore } from "@/hooks/use-diary-store";
@@ -76,8 +77,11 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex flex-col h-full bg-background">
-      <div className="p-4 border-b">
-        <Link href="/diary" className="text-2xl font-bold font-headline" onClick={handleLinkClick}>Core Diary</Link>
+      <div className="p-4 border-b h-14 flex items-center">
+        <Link href="/diary" className="flex items-center gap-2 text-xl font-bold font-headline" onClick={handleLinkClick}>
+            <BookHeart className="h-6 w-6 text-primary"/>
+            Core Diary
+        </Link>
       </div>
       <nav className="flex-1 p-4 space-y-4 overflow-y-auto">
         <Link href="/diary/new">
@@ -188,7 +192,10 @@ export default function DiaryLayout({
               <SidebarNav onNavigate={() => setMobileMenuOpen(false)}/>
             </SheetContent>
           </Sheet>
-          <Link href="/diary" className="text-lg font-bold font-headline">Core Diary</Link>
+          <Link href="/diary" className="flex items-center gap-2 text-lg font-bold font-headline">
+            <BookHeart className="h-6 w-6 text-primary"/>
+            Core Diary
+          </Link>
         </header>
         <main className="flex-1 overflow-auto p-4 md:p-6 bg-muted/40">
             {children}
