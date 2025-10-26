@@ -14,7 +14,7 @@ import { DiaryEntry } from "@/lib/types";
 function EntryCard({ entry }: { entry: DiaryEntry }) {
   const contentSnippet = entry.content.substring(0, 150);
   return (
-    <Link href={`/diary/entry/${entry.id}/edit`} className="block">
+    <Link href={`/diary/edit/${entry.id}`} className="block">
       <Card className="hover:shadow-md transition-shadow duration-200 h-full flex flex-col">
         <CardHeader>
           <CardTitle className="font-headline">{entry.title}</CardTitle>
@@ -50,7 +50,7 @@ export default function DiaryPage() {
           Your story begins here. Create your first entry.
         </p>
         <div className="mt-6">
-          <Link href="/diary/entry/new" passHref>
+          <Link href="/diary/new" passHref>
             <Button>
               <PlusCircle className="mr-2 h-4 w-4" />
               New Entry

@@ -101,7 +101,7 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
         <Link href="/diary" className="text-2xl font-bold font-headline" onClick={handleLinkClick}>Core Diary</Link>
       </div>
       <nav className="flex-1 p-4 space-y-4 overflow-y-auto">
-        <Link href="/diary/entry/new">
+        <Link href="/diary/new">
           <Button className="w-full" onClick={handleLinkClick}><FilePlus2 className="mr-2 h-4 w-4" /> New Entry</Button>
         </Link>
         <div className="relative">
