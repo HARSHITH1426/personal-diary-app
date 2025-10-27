@@ -76,6 +76,16 @@ export default function SignupPage() {
     }
   };
 
+    const AuthPageLayout = ({ children }: { children: React.ReactNode }) => (
+        <div className="relative flex items-center justify-center min-h-screen bg-background overflow-hidden">
+            <div className="absolute top-0 left-0 -translate-x-1/4 -translate-y-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl" />
+            <div className="absolute bottom-0 right-0 translate-x-1/4 translate-y-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
+            <div className="relative z-10 w-full max-w-sm px-4">
+                {children}
+            </div>
+        </div>
+    );
+
   if (isUserLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -86,8 +96,8 @@ export default function SignupPage() {
 
   if (signupSuccess) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-muted/40">
-        <Card className="w-full max-w-sm text-center">
+      <AuthPageLayout>
+        <Card className="w-full max-w-sm text-center shadow-lg">
           <CardHeader>
             <CardTitle className="text-2xl font-headline">Welcome!</CardTitle>
             <CardDescription>
@@ -102,13 +112,13 @@ export default function SignupPage() {
             </Link>
           </CardContent>
         </Card>
-      </div>
+      </AuthPageLayout>
     );
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-muted/40">
-      <Card className="w-full max-w-sm">
+    <AuthPageLayout>
+      <Card className="w-full max-w-sm shadow-lg">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-headline">Create an Account</CardTitle>
           <CardDescription>
@@ -126,12 +136,12 @@ export default function SignupPage() {
                     <FormLabel>Email</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Mail className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                         <Input
                           type="email"
                           placeholder="your@email.com"
                           {...field}
-                          className="pl-8"
+                          className="pl-10"
                         />
                       </div>
                     </FormControl>
@@ -147,12 +157,12 @@ export default function SignupPage() {
                     <FormLabel>Password</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Lock className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                         <Input
                           type="password"
                           placeholder="••••••••"
                           {...field}
-                          className="pl-8"
+                          className="pl-10"
                         />
                       </div>
                     </FormControl>
@@ -176,6 +186,6 @@ export default function SignupPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </AuthPageLayout>
   );
 }

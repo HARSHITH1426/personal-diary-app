@@ -82,8 +82,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-muted/40 p-4">
-      <Card className="w-full max-w-sm shadow-lg">
+    <div className="relative flex items-center justify-center min-h-screen bg-background overflow-hidden p-4">
+        <div className="absolute top-0 left-0 -translate-x-1/4 -translate-y-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-0 translate-x-1/4 translate-y-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
+      <Card className="w-full max-w-sm shadow-lg relative z-10">
         <CardHeader className="text-center">
           <div className="mx-auto bg-primary text-primary-foreground rounded-full p-4 w-fit mb-4">
             <Feather className="h-8 w-8" />
