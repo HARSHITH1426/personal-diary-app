@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -5,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Lock, LogIn, Loader2, Mail, BookHeart } from 'lucide-react';
+import { Lock, LogIn, Loader2, Mail, Feather } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -85,7 +86,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm shadow-lg">
         <CardHeader className="text-center">
           <div className="mx-auto bg-primary text-primary-foreground rounded-full p-4 w-fit mb-4">
-            <BookHeart className="h-8 w-8" />
+            <Feather className="h-8 w-8" />
           </div>
           <CardTitle className="text-3xl font-headline">Core Diary</CardTitle>
           <CardDescription>

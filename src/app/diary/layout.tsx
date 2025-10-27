@@ -12,7 +12,7 @@ import {
   Search,
   Settings,
   Sun,
-  BookHeart
+  Feather
 } from "lucide-react";
 
 import { useDiaryStore } from "@/hooks/use-diary-store";
@@ -81,7 +81,7 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
     <div className="flex flex-col h-full bg-background border-r">
       <div className="p-4 border-b h-16 flex items-center">
         <Link href="/diary" className="flex items-center gap-2 text-xl font-bold font-headline" onClick={handleLinkClick}>
-            <BookHeart className="h-6 w-6 text-primary"/>
+            <Feather className="h-6 w-6 text-primary"/>
             Core Diary
         </Link>
       </div>
@@ -157,7 +157,7 @@ function LoadingScreen() {
     return (
         <div className="flex h-screen w-full flex-col items-center justify-center bg-background">
             <div className="flex items-center gap-4 text-2xl font-headline font-bold text-primary">
-                <BookHeart className="h-10 w-10 animate-pulse" />
+                <Feather className="h-10 w-10 animate-pulse" />
                 <span className="animate-pulse">Core Diary</span>
             </div>
             <p className="text-muted-foreground mt-2 animate-pulse">Loading your journal...</p>
@@ -203,7 +203,7 @@ export default function DiaryLayout({
             </SheetContent>
           </Sheet>
           <Link href="/diary" className="flex items-center gap-2 text-lg font-bold font-headline">
-            <BookHeart className="h-6 w-6 text-primary"/>
+            <Feather className="h-6 w-6 text-primary"/>
             Core Diary
           </Link>
         </header>

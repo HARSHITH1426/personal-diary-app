@@ -6,7 +6,8 @@ import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { 
   BookOpen, PlusCircle, Loader2,
-  Smile, Frown, Meh, Sparkles, Cloudy, Sun, Zap, Snowflake, CloudRain
+  Smile, Frown, Meh, Sparkles, Cloudy, Sun, Zap, Snowflake, CloudRain,
+  Feather
 } from "lucide-react";
 import Image from "next/image";
 
@@ -117,7 +118,7 @@ export default function DiaryPage() {
   if (filteredEntries.length === 0) {
     return (
       <div className="text-center flex flex-col items-center justify-center h-full rounded-lg border-2 border-dashed border-muted-foreground/30 bg-card/50 p-8">
-        <BookOpen className="mx-auto h-12 w-12 text-muted-foreground" />
+        <Feather className="mx-auto h-12 w-12 text-muted-foreground" />
         <h3 className="mt-4 text-lg font-medium font-headline">No Entries Yet</h3>
         <p className="mt-1 text-sm text-muted-foreground">
           Your story begins here. Create your first entry.
@@ -142,5 +143,3 @@ export default function DiaryPage() {
     </div>
   );
 }
-
-    
