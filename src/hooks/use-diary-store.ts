@@ -4,10 +4,10 @@
 import { create } from 'zustand';
 import { DiaryEntry } from '@/lib/types';
 import { produce } from 'immer';
-import { isSameDay, parseISO } from 'date-fns';
+import { isSameDay, parseISO, getMonth, getDate } from 'date-fns';
 import { useAuth, useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { 
   addDocumentNonBlocking, 
   updateDocumentNonBlocking, 
@@ -131,6 +131,11 @@ export const useSyncDiaryStore = () => {
 export const useFilteredEntries = () => {
   useSyncDiaryStore();
   const { entries, searchTerm, selectedDate } = useDiaryStore();
+  
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentMonth = getMonth(today);
+  const currentDay = getDate(today);
 
   return entries
     .filter((entry) => {
@@ -138,11 +143,37 @@ export const useFilteredEntries = () => {
       const titleMatch = entry.title.toLowerCase().includes(searchLower);
       const contentMatch = entry.content.toLowerCase().includes(searchLower);
       const tagMatch = entry.tags?.some(tag => tag.toLowerCase().includes(searchLower));
-      const dateMatch = !selectedDate || isSameDay(parseISO(entry.date), selectedDate);
+      
+      const entryDate = parseISO(entry.date);
+      const dateMatch = !selectedDate || isSameDay(entryDate, selectedDate);
+      
+      // Exclude "On This Day" entries from the main feed if no search term or date is selected
+      if (!searchTerm && !selectedDate) {
+        const isToday = getMonth(entryDate) === currentMonth && getDate(entryDate) === currentDay;
+        if (isToday && entryDate.getFullYear() < currentYear) {
+            return false;
+        }
+      }
 
       return (titleMatch || contentMatch || tagMatch) && dateMatch;
     })
     .sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
 };
 
-    
+
+export const useOnThisDayEntries = () => {
+    useSyncDiaryStore();
+    const { entries } = useDiaryStore();
+
+    const today = new Date();
+    const currentMonth = getMonth(today);
+    const currentDay = getDate(today);
+    const currentYear = today.getFullYear();
+
+    return useMemo(() => entries.filter(entry => {
+        const entryDate = parseISO(entry.date);
+        return getMonth(entryDate) === currentMonth &&
+               getDate(entryDate) === currentDay &&
+               entryDate.getFullYear() < currentYear;
+    }).sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime()), [entries, currentMonth, currentDay, currentYear]);
+};

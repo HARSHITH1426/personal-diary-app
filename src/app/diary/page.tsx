@@ -7,11 +7,11 @@ import { format, parseISO } from "date-fns";
 import { 
   BookOpen, PlusCircle, Loader2,
   Smile, Frown, Meh, Sparkles, Cloudy, Sun, Zap, Snowflake, CloudRain,
-  Feather
+  Feather, History
 } from "lucide-react";
 import Image from "next/image";
 
-import { useFilteredEntries, useDiaryStore } from "@/hooks/use-diary-store";
+import { useFilteredEntries, useDiaryStore, useOnThisDayEntries } from "@/hooks/use-diary-store";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +34,7 @@ const weatherIcons = {
   snowy: Snowflake,
 };
 
-function EntryCard({ entry }: { entry: DiaryEntry }) {
+function EntryCard({ entry, isOnThisDay }: { entry: DiaryEntry, isOnThisDay?: boolean }) {
   const contentSnippet = entry.content.substring(0, 150);
   const entryDate = entry.date ? parseISO(entry.date) : new Date();
 
@@ -58,7 +58,7 @@ function EntryCard({ entry }: { entry: DiaryEntry }) {
           <div className="flex justify-between items-start">
             <div>
               <CardTitle className="font-headline text-xl">{entry.title}</CardTitle>
-              <CardDescription>{format(entryDate, "MMMM d, yyyy 'at' h:mm a")}</CardDescription>
+              <CardDescription>{format(entryDate, isOnThisDay ? "MMMM d, yyyy" : "MMMM d, yyyy 'at' h:mm a")}</CardDescription>
             </div>
             <div className="flex gap-2 text-muted-foreground">
               <TooltipProvider>
@@ -103,6 +103,32 @@ function EntryCard({ entry }: { entry: DiaryEntry }) {
   );
 }
 
+function OnThisDaySection() {
+    const onThisDayEntries = useOnThisDayEntries();
+
+    if (onThisDayEntries.length === 0) {
+        return null;
+    }
+
+    return (
+        <div className="mb-12">
+            <div className="flex items-center gap-3 mb-4">
+                <History className="h-7 w-7 text-primary" />
+                <div>
+                    <h2 className="text-2xl font-bold font-headline">On This Day</h2>
+                    <p className="text-muted-foreground">A look back at your memories from today.</p>
+                </div>
+            </div>
+            <div className="columns-1 md:columns-2 gap-6 space-y-6">
+                {onThisDayEntries.map(entry => (
+                    <EntryCard key={entry.id} entry={entry} isOnThisDay />
+                ))}
+            </div>
+             <hr className="my-12 border-dashed" />
+        </div>
+    )
+}
+
 export default function DiaryPage() {
   const filteredEntries = useFilteredEntries();
   const { isLoading } = useDiaryStore();
@@ -115,7 +141,7 @@ export default function DiaryPage() {
     )
   }
 
-  if (filteredEntries.length === 0) {
+  if (filteredEntries.length === 0 && !isLoading) {
     return (
       <div className="text-center flex flex-col items-center justify-center h-full rounded-lg border-2 border-dashed border-muted-foreground/30 bg-card/50 p-8">
         <Feather className="mx-auto h-12 w-12 text-muted-foreground" />
@@ -136,10 +162,14 @@ export default function DiaryPage() {
   }
 
   return (
-    <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
-      {filteredEntries.map((entry) => (
-        <EntryCard key={entry.id} entry={entry} />
-      ))}
+    <div>
+        <OnThisDaySection />
+        <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
+        {filteredEntries.map((entry) => (
+            <EntryCard key={entry.id} entry={entry} />
+        ))}
+        </div>
     </div>
   );
 }
+
