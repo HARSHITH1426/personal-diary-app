@@ -19,20 +19,19 @@ function EntryCard({ entry }: { entry: DiaryEntry }) {
 
   return (
     <Link href={`/diary/edit/${entry.id}`} className="block group">
-      <Card className="hover:shadow-lg transition-shadow duration-200 h-full flex flex-col break-inside-avoid-column">
+      <Card className="hover:shadow-xl transition-shadow duration-300 h-full flex flex-col break-inside-avoid-column bg-card/80 dark:bg-card/50 backdrop-blur-sm">
         {entry.imageUrl && (
-            <div className="overflow-hidden rounded-t-lg">
+            <div className="overflow-hidden rounded-t-lg aspect-[4/3] relative">
                 <Image
                     src={entry.imageUrl}
                     alt={entry.title}
-                    width={400}
-                    height={300}
-                    className="w-full h-auto object-cover group-hover:scale-105 transition-transform duration-300"
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-300"
                 />
             </div>
         )}
         <CardHeader>
-          <CardTitle className="font-headline">{entry.title}</CardTitle>
+          <CardTitle className="font-headline text-xl">{entry.title}</CardTitle>
           <CardDescription>{format(entryDate, "MMMM d, yyyy 'at' h:mm a")}</CardDescription>
         </CardHeader>
         <CardContent className="flex-grow">
@@ -66,7 +65,7 @@ export default function DiaryPage() {
 
   if (filteredEntries.length === 0) {
     return (
-      <div className="text-center flex flex-col items-center justify-center h-full rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/20 p-8">
+      <div className="text-center flex flex-col items-center justify-center h-full rounded-lg border-2 border-dashed border-muted-foreground/30 bg-card/50 p-8">
         <BookOpen className="mx-auto h-12 w-12 text-muted-foreground" />
         <h3 className="mt-4 text-lg font-medium font-headline">No Entries Yet</h3>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -85,7 +84,7 @@ export default function DiaryPage() {
   }
 
   return (
-    <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-6 space-y-6">
+    <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
       {filteredEntries.map((entry) => (
         <EntryCard key={entry.id} entry={entry} />
       ))}

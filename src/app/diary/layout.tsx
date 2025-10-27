@@ -27,6 +27,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useAuth, useUser } from "@/firebase";
 import { signOut } from "firebase/auth";
+import { cn } from "@/lib/utils";
 
 
 function ThemeToggle() {
@@ -77,8 +78,8 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-background">
-      <div className="p-4 border-b h-14 flex items-center">
+    <div className="flex flex-col h-full bg-background border-r">
+      <div className="p-4 border-b h-16 flex items-center">
         <Link href="/diary" className="flex items-center gap-2 text-xl font-bold font-headline" onClick={handleLinkClick}>
             <BookHeart className="h-6 w-6 text-primary"/>
             Core Diary
@@ -118,7 +119,7 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
             mode="single"
             selected={selectedDate}
             onSelect={actions.setSelectedDate}
-            className="rounded-md border"
+            className="rounded-md border bg-card"
             classNames={{
                 caption_label: "font-headline",
             }}
@@ -185,11 +186,11 @@ export default function DiaryLayout({
 
   return (
     <div className="min-h-screen w-full md:grid md:grid-cols-[280px_1fr]">
-      <div className="hidden md:block border-r">
+      <div className="hidden md:block">
         <SidebarNav />
       </div>
       <div className="flex flex-col">
-        <header className="flex h-14 items-center gap-4 border-b bg-background px-4 md:px-6 md:hidden">
+        <header className="flex h-16 items-center gap-4 border-b bg-background/95 backdrop-blur-sm px-4 md:px-6 md:hidden sticky top-0 z-10">
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
               <Button variant="outline" size="icon">
@@ -206,7 +207,7 @@ export default function DiaryLayout({
             Core Diary
           </Link>
         </header>
-        <main className="flex-1 overflow-auto p-4 md:p-6">
+        <main id="main-content" className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">
             {children}
         </main>
       </div>
