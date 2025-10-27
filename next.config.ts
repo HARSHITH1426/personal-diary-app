@@ -30,6 +30,9 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  devTools: {
+    toolbar: false,
+  },
 };
 
 export default nextConfig;
