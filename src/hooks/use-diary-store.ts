@@ -62,6 +62,8 @@ export const useDiaryStore = create<DiaryState & { actions: DiaryActions }>()((s
         content: newEntry.content,
         tags: newEntry.tags.split(',').map(t => t.trim()).filter(Boolean),
         imageUrl: newEntry.imageUrl || '',
+        mood: newEntry.mood,
+        weather: newEntry.weather,
         dateCreated: serverTimestamp(),
         dateModified: serverTimestamp(),
       };
@@ -142,3 +144,5 @@ export const useFilteredEntries = () => {
     })
     .sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
 };
+
+    

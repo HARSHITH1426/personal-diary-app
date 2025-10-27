@@ -6,10 +6,12 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { BrainCircuit, Loader2, Save, Image as ImageIcon, X } from 'lucide-react';
+import { 
+  BrainCircuit, Loader2, Save, Image as ImageIcon, X, 
+  Smile, Frown, Meh, Sparkles, Cloudy, Sun, Zap, Snowflake, CloudRain
+} from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-
 
 import { useDiaryStore, useSyncDiaryStore } from '@/hooks/use-diary-store';
 import { Button } from '@/components/ui/button';
@@ -19,12 +21,32 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { getWritingPromptAction } from '@/app/actions';
+import { cn } from '@/lib/utils';
+import { DiaryEntry } from '@/lib/types';
+
+const moodOptions = {
+  happy: { icon: Smile, label: 'Happy' },
+  sad: { icon: Frown, label: 'Sad' },
+  neutral: { icon: Meh, label: 'Neutral' },
+  excited: { icon: Sparkles, label: 'Excited' },
+  tired: { icon: Frown, label: 'Tired' }, // Re-using Frown for simplicity
+};
+
+const weatherOptions = {
+  sunny: { icon: Sun, label: 'Sunny' },
+  cloudy: { icon: Cloudy, label: 'Cloudy' },
+  rainy: { icon: CloudRain, label: 'Rainy' },
+  stormy: { icon: Zap, label: 'Stormy' },
+  snowy: { icon: Snowflake, label: 'Snowy' },
+};
 
 const formSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
   content: z.string().min(1, 'Content cannot be empty.'),
   tags: z.string().optional(),
   imageUrl: z.string().url().optional().or(z.literal('')),
+  mood: z.enum(['happy', 'sad', 'neutral', 'excited', 'tired']).optional(),
+  weather: z.enum(['sunny', 'cloudy', 'rainy', 'stormy', 'snowy']).optional(),
 });
 
 export default function NewEntryPage() {
@@ -64,6 +86,8 @@ export default function NewEntryPage() {
           content: values.content,
           tags: values.tags || '',
           imageUrl: values.imageUrl,
+          mood: values.mood,
+          weather: values.weather,
         });
         toast({
           title: 'Entry saved!',
@@ -116,6 +140,63 @@ export default function NewEntryPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleCreateEntry)} className="space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="mood"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Mood</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {Object.entries(moodOptions).map(([key, { icon: Icon, label }]) => (
+                            <Button
+                              key={key}
+                              type="button"
+                              variant={field.value === key ? 'secondary' : 'outline'}
+                              size="icon"
+                              onClick={() => field.onChange(field.value === key ? undefined : key)}
+                              className="w-14 h-14 flex-col gap-1"
+                              title={label}
+                            >
+                              <Icon className={cn("h-6 w-6", field.value === key && "text-primary")} />
+                              <span className="text-xs">{label}</span>
+                            </Button>
+                          ))}
+                        </div>
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="weather"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Weather</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {Object.entries(weatherOptions).map(([key, { icon: Icon, label }]) => (
+                            <Button
+                              key={key}
+                              type="button"
+                              variant={field.value === key ? 'secondary' : 'outline'}
+                              size="icon"
+                              onClick={() => field.onChange(field.value === key ? undefined : key)}
+                              className="w-14 h-14 flex-col gap-1"
+                              title={label}
+                            >
+                              <Icon className={cn("h-6 w-6", field.value === key && "text-primary")} />
+                              <span className="text-xs">{label}</span>
+                            </Button>
+                          ))}
+                        </div>
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
               <FormField
                 control={form.control}
                 name="title"
@@ -231,3 +312,5 @@ export default function NewEntryPage() {
     </div>
   );
 }
+
+    

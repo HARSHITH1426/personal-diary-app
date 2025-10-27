@@ -9,5 +9,9 @@ export type DiaryEntry = {
   title: string;
   content: string;
   tags: string[];
-  imageUrl?: string; // Optional field for the image URL
+  imageUrl?: string;
+  mood?: 'happy' | 'sad' | 'neutral' | 'excited' | 'tired';
+  weather?: 'sunny' | 'cloudy' | 'rainy' | 'stormy' | 'snowy';
 };
+
+    

@@ -4,7 +4,10 @@
 import React from "react";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
-import { BookOpen, PlusCircle, Loader2 } from "lucide-react";
+import { 
+  BookOpen, PlusCircle, Loader2,
+  Smile, Frown, Meh, Sparkles, Cloudy, Sun, Zap, Snowflake, CloudRain
+} from "lucide-react";
 import Image from "next/image";
 
 import { useFilteredEntries, useDiaryStore } from "@/hooks/use-diary-store";
@@ -12,10 +15,30 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DiaryEntry } from "@/lib/types";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+const moodIcons = {
+  happy: Smile,
+  sad: Frown,
+  neutral: Meh,
+  excited: Sparkles,
+  tired: Frown,
+};
+
+const weatherIcons = {
+  sunny: Sun,
+  cloudy: Cloudy,
+  rainy: CloudRain,
+  stormy: Zap,
+  snowy: Snowflake,
+};
 
 function EntryCard({ entry }: { entry: DiaryEntry }) {
   const contentSnippet = entry.content.substring(0, 150);
   const entryDate = entry.date ? parseISO(entry.date) : new Date();
+
+  const MoodIcon = entry.mood ? moodIcons[entry.mood] : null;
+  const WeatherIcon = entry.weather ? weatherIcons[entry.weather] : null;
 
   return (
     <Link href={`/diary/edit/${entry.id}`} className="block group">
@@ -31,8 +54,36 @@ function EntryCard({ entry }: { entry: DiaryEntry }) {
             </div>
         )}
         <CardHeader>
-          <CardTitle className="font-headline text-xl">{entry.title}</CardTitle>
-          <CardDescription>{format(entryDate, "MMMM d, yyyy 'at' h:mm a")}</CardDescription>
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle className="font-headline text-xl">{entry.title}</CardTitle>
+              <CardDescription>{format(entryDate, "MMMM d, yyyy 'at' h:mm a")}</CardDescription>
+            </div>
+            <div className="flex gap-2 text-muted-foreground">
+              <TooltipProvider>
+                {MoodIcon && entry.mood && (
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <MoodIcon className="h-5 w-5" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{entry.mood.charAt(0).toUpperCase() + entry.mood.slice(1)}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+                {WeatherIcon && entry.weather && (
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <WeatherIcon className="h-5 w-5" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                       <p>{entry.weather.charAt(0).toUpperCase() + entry.weather.slice(1)}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </TooltipProvider>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="flex-grow">
           <p className="text-sm text-muted-foreground">{contentSnippet}{entry.content.length > 150 ? "..." : ""}</p>
@@ -91,3 +142,5 @@ export default function DiaryPage() {
     </div>
   );
 }
+
+    
