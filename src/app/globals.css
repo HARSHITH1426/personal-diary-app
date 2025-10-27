@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -164,4 +165,19 @@ body {
 /* Hide the Genkit developer UI badge */
 .genkit-dev-badge {
   display: none !important;
+}
+
+/* For masonry layout on diary page */
+.break-inside-avoid-column {
+    break-inside: avoid-column;
+}
+
+@layer base {
+    body {
+        @apply bg-muted/40;
+    }
+    .dark body {
+        background-image: radial-gradient(hsl(var(--foreground) / 0.05) 1px, transparent 0);
+        background-size: 20px 20px;
+    }
 }

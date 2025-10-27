@@ -1,3 +1,4 @@
+
 "use client";
 
 import { create } from 'zustand';
@@ -60,6 +61,7 @@ export const useDiaryStore = create<DiaryState & { actions: DiaryActions }>()((s
         title: newEntry.title || "Untitled",
         content: newEntry.content,
         tags: newEntry.tags.split(',').map(t => t.trim()).filter(Boolean),
+        imageUrl: newEntry.imageUrl || '',
         dateCreated: serverTimestamp(),
         dateModified: serverTimestamp(),
       };

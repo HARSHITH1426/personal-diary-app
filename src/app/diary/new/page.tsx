@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useTransition } from 'react';
@@ -5,8 +6,10 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { BrainCircuit, Loader2, Save } from 'lucide-react';
+import { BrainCircuit, Loader2, Save, Image as ImageIcon, X } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
+
 
 import { useDiaryStore, useSyncDiaryStore } from '@/hooks/use-diary-store';
 import { Button } from '@/components/ui/button';
@@ -21,6 +24,7 @@ const formSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
   content: z.string().min(1, 'Content cannot be empty.'),
   tags: z.string().optional(),
+  imageUrl: z.string().url().optional().or(z.literal('')),
 });
 
 export default function NewEntryPage() {
@@ -37,8 +41,20 @@ export default function NewEntryPage() {
       title: '',
       content: '',
       tags: '',
+      imageUrl: '',
     },
   });
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        form.setValue('imageUrl', reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   async function handleCreateEntry(values: z.infer<typeof formSchema>) {
     startSaveTransition(async () => {
@@ -47,6 +63,7 @@ export default function NewEntryPage() {
           title: values.title,
           content: values.content,
           tags: values.tags || '',
+          imageUrl: values.imageUrl,
         });
         toast({
           title: 'Entry saved!',
@@ -112,6 +129,56 @@ export default function NewEntryPage() {
                   </FormItem>
                 )}
               />
+
+             <FormField
+                control={form.control}
+                name="imageUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Image</FormLabel>
+                    <FormControl>
+                      <div>
+                        <Input
+                          id="image-upload"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="hidden"
+                        />
+                        <label
+                          htmlFor="image-upload"
+                          className="cursor-pointer flex items-center justify-center w-full h-32 border-2 border-dashed border-muted-foreground/30 rounded-md hover:bg-muted/50 transition-colors"
+                        >
+                          {field.value ? (
+                             <div className="relative w-full h-full">
+                               <Image src={field.value} alt="Uploaded preview" layout="fill" objectFit="contain" className="rounded-md p-2" />
+                               <Button
+                                 type="button"
+                                 variant="ghost"
+                                 size="icon"
+                                 className="absolute top-1 right-1 h-6 w-6 bg-black/50 hover:bg-black/75"
+                                 onClick={(e) => {
+                                    e.preventDefault();
+                                    form.setValue('imageUrl', '');
+                                 }}
+                               >
+                                 <X className="h-4 w-4 text-white" />
+                               </Button>
+                            </div>
+                          ) : (
+                            <div className="text-center text-muted-foreground">
+                              <ImageIcon className="mx-auto h-8 w-8" />
+                              <p className="text-sm mt-1">Click to upload an image</p>
+                            </div>
+                          )}
+                        </label>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={form.control}
                 name="content"

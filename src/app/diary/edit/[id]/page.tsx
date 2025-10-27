@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useTransition } from 'react';
@@ -5,8 +6,9 @@ import { useRouter, useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { BrainCircuit, Loader2, Save, Trash2 } from 'lucide-react';
+import { BrainCircuit, Loader2, Save, Trash2, Image as ImageIcon, X } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 import { useDiaryStore, useSyncDiaryStore } from '@/hooks/use-diary-store';
 import { Button } from '@/components/ui/button';
@@ -28,32 +30,25 @@ import {
 } from '@/components/ui/alert-dialog';
 import { getWritingPromptAction } from '@/app/actions';
 
-// I've defined the form's structure and validation rules here using Zod.
-// This ensures that an entry must have a title and content before it can be saved.
 const formSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
   content: z.string().min(1, 'Content cannot be empty.'),
   tags: z.string().optional(),
+  imageUrl: z.string().url().optional().or(z.literal('')),
 });
 
-// A helper function to process tags from a string to an array.
-// This keeps the logic separate and reusable.
 const processTags = (tagsString?: string): string[] => {
   if (!tagsString) return [];
   return tagsString.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
 }
 
 export default function EditEntryPage() {
-  // This custom hook keeps the local state in sync with Firestore. It's essential
-  // for making sure the data loaded on this page is always fresh.
   useSyncDiaryStore();
   const router = useRouter();
   const params = useParams();
   const { id } = params;
   const entryId = Array.isArray(id) ? id[0] : id;
 
-  // I'm selecting only the specific data this component needs from the global store.
-  // This is a performance optimization: the component only re-renders if this data changes.
   const { entry, actions, entries } = useDiaryStore(state => ({
     entry: state.entries.find(e => e.id === entryId),
     actions: state.actions,
@@ -61,57 +56,61 @@ export default function EditEntryPage() {
   }));
   
   const { toast } = useToast();
-  // useTransition is a React Hook that lets you update state without blocking the UI.
-  // I use it here to show loading spinners on buttons during async operations like saving or deleting.
   const [isSaving, startSaveTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
   const [isGeneratingPrompt, startPromptGeneration] = useTransition();
 
-  // I'm initializing react-hook-form here. It uses the Zod schema for validation
-  // and sets default values for the form fields.
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: '',
       content: '',
       tags: '',
+      imageUrl: '',
     },
   });
 
-  // This `useEffect` hook's purpose is to populate the form fields when the entry data loads.
-  // It watches the `entry` object, and when it becomes available, it resets the form with the entry's data.
   useEffect(() => {
     if (entry) {
       form.reset({
         title: entry.title,
         content: entry.content,
         tags: Array.isArray(entry.tags) ? entry.tags.join(', ') : '',
+        imageUrl: entry.imageUrl || '',
       });
     }
   }, [entry, form]);
 
-  // This function handles the form submission. I've named it to be descriptive of its action.
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        form.setValue('imageUrl', reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   function handleUpdateEntry(values: z.infer<typeof formSchema>) {
     if (!entry) return;
 
-    // By wrapping the update logic in `startTransition`, I ensure the UI remains responsive
-    // while the update operation is processed in the background.
     startSaveTransition(() => {
       actions.updateEntry({
         ...entry,
         title: values.title,
         content: values.content,
         tags: processTags(values.tags),
+        imageUrl: values.imageUrl,
       });
       toast({
         title: 'Entry updated!',
         description: 'Your changes have been saved.',
       });
-      router.push('/diary'); // After saving, I navigate the user back to the main diary page.
+      router.push('/diary');
     });
   }
 
-  // This function handles deleting the current entry.
   const handleDeleteEntry = () => {
     if (!entry) return;
     startDeleteTransition(() => {
@@ -124,13 +123,11 @@ export default function EditEntryPage() {
     });
   };
 
-  // This function calls a server action to get an AI-generated writing suggestion.
   const getAIWritingSuggestion = () => {
     startPromptGeneration(async () => {
-        // I collect text from recent past entries to give the AI context.
         const pastEntriesText = entries
             .filter(e => e.id !== entryId)
-            .slice(0, 5) // I'm using the 5 most recent entries for context.
+            .slice(0, 5)
             .map(e => `Title: ${e.title}\n${e.content}`)
             .join('\n---\n');
             
@@ -138,7 +135,6 @@ export default function EditEntryPage() {
 
         if ('prompt' in result && result.prompt) {
             const currentContent = form.getValues('content');
-            // I append the new prompt to the existing content.
             form.setValue('content', currentContent ? `${currentContent}\n\n${result.prompt}` : result.prompt);
             toast({
                 title: 'Suggestion added!',
@@ -154,8 +150,6 @@ export default function EditEntryPage() {
     });
   };
 
-  // If the entry data is not yet available (e.g., on a page refresh),
-  // I show a clear loading message to the user.
   if (!entry) {
     return <div className="text-center p-8">Loading entry...</div>;
   }
@@ -170,6 +164,7 @@ export default function EditEntryPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleUpdateEntry)} className="space-y-8">
+              
               <FormField
                 control={form.control}
                 name="title"
@@ -183,6 +178,53 @@ export default function EditEntryPage() {
                   </FormItem>
                 )}
               />
+
+              <FormField
+                control={form.control}
+                name="imageUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Image</FormLabel>
+                    <FormControl>
+                      <div>
+                        <Input
+                          id="image-upload"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="hidden"
+                        />
+                        <label
+                          htmlFor="image-upload"
+                          className="cursor-pointer flex items-center justify-center w-full h-32 border-2 border-dashed border-muted-foreground/30 rounded-md hover:bg-muted/50"
+                        >
+                          {field.value ? (
+                            <div className="relative w-full h-full">
+                               <Image src={field.value} alt="Uploaded image" layout="fill" objectFit="contain" className="rounded-md" />
+                               <Button
+                                 type="button"
+                                 variant="ghost"
+                                 size="icon"
+                                 className="absolute top-1 right-1 h-6 w-6 bg-black/50 hover:bg-black/75"
+                                 onClick={() => form.setValue('imageUrl', '')}
+                               >
+                                 <X className="h-4 w-4 text-white" />
+                               </Button>
+                            </div>
+                          ) : (
+                            <div className="text-center text-muted-foreground">
+                              <ImageIcon className="mx-auto h-8 w-8" />
+                              <p className="text-sm mt-1">Click to upload an image</p>
+                            </div>
+                          )}
+                        </label>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={form.control}
                 name="content"

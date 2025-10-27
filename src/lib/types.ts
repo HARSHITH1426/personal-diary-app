@@ -1,3 +1,4 @@
+
 import { Timestamp } from "firebase/firestore";
 
 export type DiaryEntry = {
@@ -8,4 +9,5 @@ export type DiaryEntry = {
   title: string;
   content: string;
   tags: string[];
+  imageUrl?: string; // Optional field for the image URL
 };

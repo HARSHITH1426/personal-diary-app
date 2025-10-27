@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -205,7 +206,7 @@ export default function DiaryLayout({
             Core Diary
           </Link>
         </header>
-        <main className="flex-1 overflow-auto p-4 md:p-6 bg-muted/40">
+        <main className="flex-1 overflow-auto p-4 md:p-6">
             {children}
         </main>
       </div>
@@ -233,5 +234,3 @@ function MenuIcon(props: React.SVGProps<SVGSVGElement>) {
       </svg>
     )
   }
-
-    
