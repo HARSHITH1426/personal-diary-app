@@ -12,7 +12,8 @@ import {
   Search,
   Settings,
   Sun,
-  Feather
+  Feather,
+  PieChart
 } from "lucide-react";
 
 import { useDiaryStore } from "@/hooks/use-diary-store";
@@ -105,6 +106,12 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                 <Button variant={pathname === '/diary' ? 'secondary' : 'ghost'} className="w-full justify-start" onClick={handleLinkClick}>
                     <Home className="mr-2 h-4 w-4" />
                     All Entries
+                </Button>
+            </Link>
+            <Link href="/diary/stats" passHref>
+                <Button variant={pathname === '/diary/stats' ? 'secondary' : 'ghost'} className="w-full justify-start" onClick={handleLinkClick}>
+                    <PieChart className="mr-2 h-4 w-4" />
+                    Statistics
                 </Button>
             </Link>
             <Link href="/diary/settings" passHref>
@@ -222,7 +229,7 @@ function MenuIcon(props: React.SVGProps<SVGSVGElement>) {
         xmlns="http://www.w3.org/2000/svg"
         width="24"
         height="24"
-        viewBox="0 0 24"
+        viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
         strokeWidth="2"
